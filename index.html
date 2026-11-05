@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ระบบจัดการร้าน F&B ครอบครัว (Clean Minimal)</title>
+  <!-- Google Fonts: Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea, select {
+      user-select: text;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl p-1.5 bg-slate-100 rounded-xl">🧋</span>
+        <div>
+          <h1 class="text-base font-bold text-slate-900 leading-tight">ระบบร้านครอบครัว</h1>
+          <p class="text-xs text-slate-500 font-normal" id="dbStatusBadge">
+            <span class="inline-block w-2 h-2 rounded-full bg-slate-300 mr-1"></span>ยังไม่ได้เชื่อมต่อ
+          </p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-2">
+        <button onclick="refreshData()" class="p-2 text-slate-600 hover:text-slate-900 bg-slate-100 active:bg-slate-200 rounded-xl transition text-sm flex items-center gap-1 font-medium">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span class="hidden sm:inline">รีเฟรช</span>
+        </button>
+        <button onclick="switchTab('settings')" class="p-2 text-slate-600 hover:text-slate-900 bg-slate-100 active:bg-slate-200 rounded-xl transition text-sm">
+          ⚙️
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-4 pb-28">
+
+    <!-- 1. TAB: POS SCREEN (หน้าขายหน้าร้าน) -->
+    <section id="tab-pos" class="tab-content block">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- รายการเมนู (เฉพาะสถานะ Active) -->
+        <div class="lg:col-span-7 xl:col-span-8">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">รายการขายหน้าร้าน (POS)</h2>
+              <p class="text-xs text-slate-500">เลือกเมนูกดขาย ระบบจะตัดสต็อกวัตถุดิบอัตโนมัติ</p>
+            </div>
+            <div class="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-200 font-medium">
+              เฉพาะสถานะ Active
+            </div>
+          </div>
+
+          <div id="posGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <!-- เมนูจะ render ที่นี่ผ่าน JS -->
+          </div>
+        </div>
+
+        <!-- กล่องตะกร้า / สรุปออเดอร์ -->
+        <div class="lg:col-span-5 xl:col-span-4 sticky top-20">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                <span>🧾 สรุปรายการสั่งซื้อ</span>
+                <span id="cartCountBadge" class="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded-full font-semibold">0</span>
+              </h3>
+              <button onclick="clearCart()" class="text-xs text-rose-500 hover:text-rose-700 font-medium">
+                ล้างรายการ
+              </button>
+            </div>
+
+            <!-- รายการในตะกร้า -->
+            <div id="cartItemsList" class="divide-y divide-slate-100 max-h-64 overflow-y-auto no-scrollbar py-2">
+              <div class="py-8 text-center text-slate-400 text-sm">
+                แตะเลือกเมนูทางซ้าย เพื่อเริ่มการขาย
+              </div>
+            </div>
+
+            <!-- ยอดเงินรวม -->
+            <div class="pt-3 border-t border-slate-100 space-y-2">
+              <div class="flex justify-between text-xs text-slate-500">
+                <span>ต้นทุนวัตถุดิบประมาณการ</span>
+                <span id="cartTotalCostText">฿0.00</span>
+              </div>
+              <div class="flex justify-between items-baseline">
+                <span class="text-sm font-semibold text-slate-700">ยอดรวมทั้งสิ้น</span>
+                <span id="cartTotalRevenueText" class="text-2xl font-black text-slate-900">฿0</span>
+              </div>
+
+              <!-- ปุ่มชำระเงินและตัดสต็อก -->
+              <button id="btnCheckout" onclick="processCheckout()" disabled class="w-full mt-3 py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-base shadow-sm transition flex items-center justify-center gap-2">
+                <span>ยืนยันการขาย & ตัดสต็อก</span>
+                <span>⚡</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 2. TAB: INGREDIENTS (คลังสต็อกวัตถุดิบ) -->
+    <section id="tab-ingredients" class="tab-content hidden">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">คลังวัตถุดิบ & สต็อกคงเหลือ</h2>
+          <p class="text-xs text-slate-500">ติดตามปริมาณวัตถุดิบ ต้นทุนต่อหน่วย และเติมของ</p>
+        </div>
+        <button onclick="openIngredientModal()" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 shadow-sm">
+          <span>+ เพิ่มวัตถุดิบใหม่</span>
+        </button>
+      </div>
+
+      <!-- รายการวัตถุดิบ -->
+      <div id="ingredientsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <!-- Render ผ่าน JS -->
+      </div>
+    </section>
+
+    <!-- 3. TAB: RECIPES (จัดสูตร / คำนวณต้นทุน R&D) -->
+    <section id="tab-recipes" class="tab-content hidden">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">จัดโครงสร้างสูตร & คำนวณต้นทุน</h2>
+          <p class="text-xs text-slate-500">ออกแบบสูตรเลโก้ คำนวณกำไร และตั้งสถานะสูตร</p>
+        </div>
+        <button onclick="openRecipeModal()" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 shadow-sm">
+          <span>+ สร้างสูตรเมนูใหม่</span>
+        </button>
+      </div>
+
+      <!-- ฟิลเตอร์สถานะสูตร -->
+      <div class="flex gap-2 overflow-x-auto pb-2 mb-4 text-xs font-semibold">
+        <button onclick="filterRecipes('all')" class="recipe-filter-btn active px-3.5 py-1.5 rounded-full bg-slate-900 text-white" data-filter="all">ทั้งหมด (<span id="count-all">0</span>)</button>
+        <button onclick="filterRecipes('Active')" class="recipe-filter-btn px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-100" data-filter="Active">Active พร้อมขาย (<span id="count-active">0</span>)</button>
+        <button onclick="filterRecipes('Draft')" class="recipe-filter-btn px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-100" data-filter="Draft">Draft ทดลอง R&D (<span id="count-draft">0</span>)</button>
+        <button onclick="filterRecipes('Inactive')" class="recipe-filter-btn px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-100" data-filter="Inactive">Inactive พักไว้ (<span id="count-inactive">0</span>)</button>
+      </div>
+
+      <div id="recipesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Render ผ่าน JS -->
+      </div>
+    </section>
+
+    <!-- 4. TAB: SALES LOG (ประวัติการขาย) -->
+    <section id="tab-sales" class="tab-content hidden">
+      <div class="mb-5">
+        <h2 class="text-xl font-bold text-slate-900">ประวัติการขาย & สรุปยอด</h2>
+        <p class="text-xs text-slate-500">บันทึกยอดขายจาก Google Sheets แบบเรียลไทม์</p>
+      </div>
+
+      <!-- สรุปตัวเลขสถิติ -->
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200">
+          <p class="text-xs text-slate-500">ยอดขายรวม</p>
+          <p id="statTotalRev" class="text-xl sm:text-2xl font-bold text-slate-900 mt-1">฿0</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200">
+          <p class="text-xs text-slate-500">ต้นทุนรวม</p>
+          <p id="statTotalCost" class="text-xl sm:text-2xl font-bold text-rose-600 mt-1">฿0</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200">
+          <p class="text-xs text-slate-500">กำไรเบื้องต้น</p>
+          <p id="statTotalProfit" class="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">฿0</p>
+        </div>
+      </div>
+
+      <!-- ตารางรายการขายล่าสุด -->
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="p-4 border-b border-slate-100 font-bold text-sm text-slate-800">
+          ประวัติการขายล่าสุด
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-500 uppercase font-medium border-b border-slate-200">
+              <tr>
+                <th class="p-3">เวลา</th>
+                <th class="p-3">เมนู</th>
+                <th class="p-3 text-center">จำนวน</th>
+                <th class="p-3 text-right">ยอดขาย</th>
+                <th class="p-3 text-right">ต้นทุน</th>
+                <th class="p-3 text-right">กำไร</th>
+              </tr>
+            </thead>
+            <tbody id="salesTableBody" class="divide-y divide-slate-100">
+              <!-- Render ผ่าน JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. TAB: SETTINGS (การตั้งค่าเชื่อมต่อ Google Sheets & จัดการข้อมูล) -->
+    <section id="tab-settings" class="tab-content hidden">
+      <div class="max-w-2xl mx-auto space-y-6">
+
+        <!-- กล่องตั้งค่า URL -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-slate-900 mb-2">⚙️ ตั้งค่าการเชื่อมต่อ Google Sheets</h2>
+          <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+            นำ <strong>Web App URL</strong> จาก Google Apps Script (GAS) มาวางที่นี่
+          </p>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Google Apps Script Web App URL</label>
+              <input type="url" id="apiEndpointInput" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" class="w-full text-sm p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 font-mono text-slate-800">
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2">
+              <button onclick="saveApiUrl()" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition">
+                💾 บันทึก URL & รีเฟรช
+              </button>
+              <button onclick="initSheetsThroughApi()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-1">
+                <span>⚡ สั่งสร้าง 4 ชีทเริ่มต้น (แบบสะอาด)</span>
+              </button>
+            </div>
+
+            <div id="settingsMsg" class="mt-4 p-3 rounded-xl text-xs hidden"></div>
+          </div>
+        </div>
+
+        <!-- กล่องล้างข้อมูล (Data Management) -->
+        <div class="bg-white rounded-2xl border border-rose-100 p-6 shadow-sm">
+          <h3 class="text-base font-bold text-rose-900 mb-1">🧹 ล้างข้อมูลทั้งหมดในฐานข้อมูล (Reset Database)</h3>
+          <p class="text-xs text-slate-500 mb-4">
+            ใช้เมื่อต้องการเคลียร์ข้อมูลทดสอบ/Mock ทั้งหมดในชีท Ingredients, Recipes, Recipe_Items, และ Sales_Log ให้เป็นฐานข้อมูลเปล่าพร้อมเริ่มใส่ข้อมูลจริง (หัวตารางยังอยู่ครบ)
+          </p>
+          <button onclick="clearDatabaseAll()" class="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2">
+            <span>🗑️ สั่งล้างข้อมูลทั้งหมดใน Google Sheets</span>
+          </button>
+        </div>
+
+        <!-- คำแนะนำการเปิดบน iPad / มือถือ -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm text-xs space-y-3">
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>📱 วิธีเปิดใช้งานบน iPad และ มือถือของคนในครอบครัว</span>
+          </h3>
+          <p class="text-slate-600 leading-relaxed">
+            เพื่อให้คนในครอบครัวเปิดใช้งานผ่านมือถือ/iPad ได้อย่างสะดวกตลอดเวลา โดยไม่ต้องเปิดคอมพิวเตอร์ทิ้งไว้ แนะนำวิธีง่าย ๆ ดังนี้ครับ:
+          </p>
+          <div class="space-y-2 pl-2">
+            <div class="p-3 bg-slate-50 rounded-xl">
+              <p class="font-bold text-slate-800 mb-1">วิธีที่ 1: อัปโหลดขึ้นโฮสติ้งฟรี (แนะนำที่สุด - เปิดได้ทุกที่ทุกเวลา)</p>
+              <p class="text-slate-600 leading-relaxed">
+                นำไฟล์ <code>index.html</code> นี้ไปอัปโหลดขึ้น **GitHub Pages**, **Vercel** หรือ **Netlify** (ฟรี 100%) คุณจะได้ลิงก์เว็บไซต์มา เช่น <code>https://my-family-cafe.vercel.app</code> ส่งลิงก์นี้ให้ทุกคนในครอบครัวเปิดได้ทันที
+              </p>
+            </div>
+
+            <div class="p-3 bg-slate-50 rounded-xl">
+              <p class="font-bold text-slate-800 mb-1">วิธีที่ 2: เปิดผ่าน Wi-Fi วงเดียวกันในบ้าน (ทดสอบทันใจ)</p>
+              <p class="text-slate-600 leading-relaxed">
+                เปิดเซิร์ฟเวอร์บนเครื่องคอมพิวเตอร์ของคุณ (เช่น ผ่าน Live Server หรือ Node/Python) จากนั้นบน iPad/iPhone ให้เปิด Safari แล้วพิมพ์ IP ของคอม เช่น <code>http://192.168.1.xxx:5500</code>
+              </p>
+            </div>
+
+            <div class="p-3 bg-emerald-50 text-emerald-900 rounded-xl">
+              <p class="font-bold mb-1">💡 เทคนิคตั้งเป็นแอปบนหน้าจอ iPad / iPhone (เต็มจอเหมือนแอปจริง):</p>
+              <p class="leading-relaxed">
+                เมื่อเปิดเว็บใน Safari บน iPad/iPhone แล้ว ให้กดปุ่ม **แชร์ (Share ⎋)** &gt; เลือก **"เพิ่มไปยังหน้าจอโฮม" (Add to Home Screen)** จะได้ไอคอนแอปบนหน้าจอ กดเปิดแล้วใช้งานได้เต็มจอทันทีโดยไม่มีแถบเบราว์เซอร์กวนใจ!
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= BOTTOM NAVIGATION BAR (MOBILE & IPAD) ================= -->
+  <nav class="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2">
+    <div class="max-w-md mx-auto grid grid-cols-4 gap-1 px-2 text-center">
+      <button onclick="switchTab('pos')" class="nav-btn active flex flex-col items-center py-1 text-slate-900 font-semibold" data-tab="pos">
+        <span class="text-xl">🛍️</span>
+        <span class="text-[11px] mt-0.5">ขาย (POS)</span>
+      </button>
+      <button onclick="switchTab('ingredients')" class="nav-btn flex flex-col items-center py-1 text-slate-400 font-normal hover:text-slate-700" data-tab="ingredients">
+        <span class="text-xl">📦</span>
+        <span class="text-[11px] mt-0.5">สต็อกวัตถุดิบ</span>
+      </button>
+      <button onclick="switchTab('recipes')" class="nav-btn flex flex-col items-center py-1 text-slate-400 font-normal hover:text-slate-700" data-tab="recipes">
+        <span class="text-xl">🥣</span>
+        <span class="text-[11px] mt-0.5">จัดสูตร (R&D)</span>
+      </button>
+      <button onclick="switchTab('sales')" class="nav-btn flex flex-col items-center py-1 text-slate-400 font-normal hover:text-slate-700" data-tab="sales">
+        <span class="text-xl">📊</span>
+        <span class="text-[11px] mt-0.5">ยอดขาย</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ================= MODAL: เพิ่ม/แก้ไข วัตถุดิบ ================= -->
+  <div id="modalIngredient" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 id="modalIngTitle" class="font-bold text-slate-900 text-base">เพิ่มวัตถุดิบใหม่</h3>
+        <button onclick="closeModal('modalIngredient')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <form id="ingredientForm" onsubmit="saveIngredientSubmit(event)" class="space-y-4 pt-4 text-xs">
+        <input type="hidden" id="ingId">
+        <input type="hidden" id="ingImageBase64">
+
+        <!-- รูปถ่าย/คลังภาพ + Emoji -->
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
+          <div class="relative w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+            <img id="ingImagePreview" src="" class="w-full h-full object-cover hidden">
+            <span id="ingEmojiPreview" class="text-3xl">🍂</span>
+          </div>
+
+          <div class="flex-1 space-y-1.5">
+            <div class="flex items-center gap-2">
+              <label class="cursor-pointer bg-white border border-slate-300 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-medium text-[11px] flex items-center gap-1 shadow-sm">
+                <span>📷 ถ่ายรูป / เลือกภาพ</span>
+                <input type="file" accept="image/*" class="hidden" onchange="handleImageFilePick(event, 'ing')">
+              </label>
+              <button type="button" id="btnRemoveIngImg" onclick="removeImage('ing')" class="text-rose-500 hover:text-rose-700 text-[11px] hidden font-medium">ลบรูป</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-500 text-[11px]">หรือใช้อิโมจิแทน:</span>
+              <input type="text" id="ingEmoji" value="🍂" oninput="updateEmojiPreview('ing')" class="w-12 p-1 text-center border border-slate-200 rounded-lg text-sm bg-white">
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">ชื่อวัตถุดิบ</label>
+          <input type="text" id="ingName" required placeholder="เช่น ผงชาไทยพรีเมียม" class="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm">
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-100">
+          <p class="font-semibold text-slate-800 text-[11px]">📦 ข้อมูลตอนซื้อ (จัดซื้อ)</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-600 mb-1">ราคาซื้อรวม (บาท)</label>
+              <input type="number" step="any" id="ingPurchasePrice" oninput="calcUnitCostPreview()" required placeholder="150" class="w-full p-2 rounded-lg border border-slate-200 bg-white">
+            </div>
+            <div>
+              <label class="block text-slate-600 mb-1">ชื่อหน่วยซื้อ</label>
+              <input type="text" id="ingPurchaseUnit" placeholder="ถุง, ลิตร, แพ็ก" value="ถุง" class="w-full p-2 rounded-lg border border-slate-200 bg-white">
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-600 mb-1">ปริมาณที่ได้ต่อแพ็ก (แปลงเป็นหน่วยย่อย)</label>
+              <input type="number" step="any" id="ingPurchaseQty" oninput="calcUnitCostPreview()" required placeholder="1000" class="w-full p-2 rounded-lg border border-slate-200 bg-white">
+            </div>
+            <div>
+              <label class="block text-slate-600 mb-1">หน่วยใช้ชง (หน่วยย่อย)</label>
+              <select id="ingRecipeUnit" onchange="calcUnitCostPreview()" class="w-full p-2 rounded-lg border border-slate-200 bg-white">
+                <option value="กรัม">กรัม (g)</option>
+                <option value="มล.">มิลลิลิตร (ml)</option>
+                <option value="ชิ้น">ชิ้น</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">สต็อกคงเหลือปัจจุบัน (หน่วยย่อย)</label>
+            <input type="number" step="any" id="ingCurrentStock" required placeholder="เช่น 1000" class="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">ต้นทุนต่อหน่วยย่อย (คำนวณให้อัตโนมัติ)</label>
+            <input type="text" id="ingCostPerUnitPreview" readonly value="฿0.00" class="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 font-semibold">
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modalIngredient')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium">ยกเลิก</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold">บันทึกลงชีท</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: สร้าง/แก้ไข สูตรเมนู & คำนวณต้นทุน ================= -->
+  <div id="modalRecipe" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 id="modalRecipeTitle" class="font-bold text-slate-900 text-base">สร้างสูตรเมนูใหม่</h3>
+        <button onclick="closeModal('modalRecipe')" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <form id="recipeForm" onsubmit="saveRecipeSubmit(event)" class="space-y-4 pt-4 text-xs">
+        <input type="hidden" id="recipeId">
+        <input type="hidden" id="recipeImageBase64">
+
+        <!-- รูปถ่าย/คลังภาพ + Emoji เมนู -->
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
+          <div class="relative w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+            <img id="recipeImagePreview" src="" class="w-full h-full object-cover hidden">
+            <span id="recipeEmojiPreview" class="text-3xl">🧋</span>
+          </div>
+
+          <div class="flex-1 space-y-1.5">
+            <div class="flex items-center gap-2">
+              <label class="cursor-pointer bg-white border border-slate-300 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-medium text-[11px] flex items-center gap-1 shadow-sm">
+                <span>📷 ถ่ายรูป / เลือกภาพ</span>
+                <input type="file" accept="image/*" class="hidden" onchange="handleImageFilePick(event, 'recipe')">
+              </label>
+              <button type="button" id="btnRemoveRecipeImg" onclick="removeImage('recipe')" class="text-rose-500 hover:text-rose-700 text-[11px] hidden font-medium">ลบรูป</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-500 text-[11px]">หรือใช้อิโมจิแทน:</span>
+              <input type="text" id="recipeEmoji" value="🧋" oninput="updateEmojiPreview('recipe')" class="w-12 p-1 text-center border border-slate-200 rounded-lg text-sm bg-white">
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">ชื่อเมนู</label>
+          <input type="text" id="recipeName" required placeholder="เช่น ชาไทยนมโอ๊ตเย็น (16oz)" class="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">สถานะสูตร (Recipe Status)</label>
+            <select id="recipeStatus" onchange="validateRecipeStatus()" class="w-full p-2.5 rounded-xl border border-slate-200 bg-white font-medium">
+              <option value="Draft">🧪 Draft (ทดลอง/R&D - ราคา=0 ได้)</option>
+              <option value="Active">✅ Active (พร้อมขาย - โชว์ที่ POS)</option>
+              <option value="Inactive">⏸️ Inactive (พักไว้ชั่วคราว)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">ราคาขายหน้าร้าน (บาท)</label>
+            <input type="number" step="any" id="recipeSellingPrice" oninput="calcRecipeCostTotal()" value="0" placeholder="0" class="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm font-bold">
+            <span id="priceNotice" class="text-[10px] text-amber-600 mt-1 block"></span>
+          </div>
+        </div>
+
+        <!-- รายการวัตถุดิบในสูตร (Lego Builder) -->
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-slate-800 text-xs">ส่วนผสมวัตถุดิบ (โครงสร้างสูตร)</span>
+            <button type="button" onclick="addRecipeItemRow()" class="text-[11px] font-semibold text-blue-600 hover:text-blue-800">
+              + เพิ่มส่วนผสม
+            </button>
+          </div>
+
+          <div id="recipeItemsContainer" class="space-y-2">
+            <!-- Row ส่วนผสมจะ render ที่นี่ -->
+          </div>
+        </div>
+
+        <!-- กล่องสรุปต้นทุนและกำไร Realtime -->
+        <div class="p-4 bg-slate-900 text-white rounded-xl space-y-2">
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-300">ต้นทุนวัตถุดิบรวมต่อแก้ว/ชิ้น:</span>
+            <span id="recipeTotalCostPreview" class="font-bold text-amber-400">฿0.00</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-300">กำไรขั้นต้น (Profit):</span>
+            <span id="recipeProfitPreview" class="font-bold text-emerald-400">฿0.00</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-300">อัตรากำไร (Margin %):</span>
+            <span id="recipeMarginPreview" class="font-bold text-white">0%</span>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modalRecipe')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium">ยกเลิก</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold">บันทึกสูตรลงชีท</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ปรับสต็อกด่วน ================= -->
+  <div id="modalAdjustStock" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl">
+      <h3 class="font-bold text-slate-900 text-sm mb-1" id="stockAdjTitle">ปรับยอดสต็อก</h3>
+      <p class="text-xs text-slate-500 mb-4" id="stockAdjSubtitle"></p>
+      <input type="hidden" id="stockAdjId">
+      
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-slate-700 mb-1">ยอดสต็อกคงเหลือใหม่</label>
+        <input type="number" step="any" id="stockAdjInput" class="w-full p-2.5 rounded-xl border border-slate-200 text-base font-bold focus:ring-2 focus:ring-slate-900 outline-none">
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeModal('modalAdjustStock')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-medium">ยกเลิก</button>
+        <button type="button" onclick="confirmAdjustStock()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATION ================= -->
+  <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-150%] transition-transform duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-xs max-w-sm font-medium">
+    <span id="toastIcon">✅</span>
+    <span id="toastMsg">บันทึกสำเร็จ</span>
+  </div>
+
+  <!-- ================= JAVASCRIPT APP LOGIC ================= -->
+  <script>
+    /**
+     * =========================================================================
+     * APP STATE & CONSTANTS
+     * =========================================================================
+     */
+    let API_URL = localStorage.getItem("fnb_gas_api_url") || "";
+
+    // ข้อมูลสะอาด 100% เริ่มต้นด้วย Array ว่างเปล่า
+    let db = {
+      ingredients: [],
+      recipes: [],
+      recipe_items: [],
+      sales_log: []
+    };
+
+    let cart = []; // Array of { recipeId, name, emoji, image, price, cost, qty, itemsUsed }
+
+    const UNIT_MULTIPLIERS = {
+      "g_ml": 1,
+      "tsp": 5,    // 1 ช้อนชา = 5 กรัม/มล.
+      "tbsp": 15,  // 1 ช้อนโต๊ะ = 15 กรัม/มล.
+      "oz": 30     // 1 ออนซ์ = 30 มล.
+    };
+
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("apiEndpointInput").value = API_URL;
+      if (API_URL) {
+        refreshData();
+      } else {
+        renderAll();
+      }
+    });
+
+    /**
+     * =========================================================================
+     * IMAGE UPLOAD & CANVAS COMPRESSOR (สำหรับ iPad/Mobile)
+     * =========================================================================
+     */
+    function handleImageFilePick(event, type) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          // บีบอัดภาพให้อยู่ในขนาด thumbnail ~180x180 px JPEG เพื่อให้เบาและพอดีกับเซลล์ในชีท
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxSize = 180;
+
+          if (width > height) {
+            if (width > maxSize) {
+              height = Math.round((height * maxSize) / width);
+              width = maxSize;
+            }
+          } else {
+            if (height > maxSize) {
+              width = Math.round((width * maxSize) / height);
+              height = maxSize;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // แปลงเป็น Base64 Data URL (~8 - 15 KB)
+          const base64Data = canvas.toDataURL("image/jpeg", 0.7);
+
+          if (type === "ing") {
+            document.getElementById("ingImageBase64").value = base64Data;
+            document.getElementById("ingImagePreview").src = base64Data;
+            document.getElementById("ingImagePreview").classList.remove("hidden");
+            document.getElementById("ingEmojiPreview").classList.add("hidden");
+            document.getElementById("btnRemoveIngImg").classList.remove("hidden");
+          } else {
+            document.getElementById("recipeImageBase64").value = base64Data;
+            document.getElementById("recipeImagePreview").src = base64Data;
+            document.getElementById("recipeImagePreview").classList.remove("hidden");
+            document.getElementById("recipeEmojiPreview").classList.add("hidden");
+            document.getElementById("btnRemoveRecipeImg").classList.remove("hidden");
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeImage(type) {
+      if (type === "ing") {
+        document.getElementById("ingImageBase64").value = "";
+        document.getElementById("ingImagePreview").src = "";
+        document.getElementById("ingImagePreview").classList.add("hidden");
+        document.getElementById("ingEmojiPreview").classList.remove("hidden");
+        document.getElementById("btnRemoveIngImg").classList.add("hidden");
+      } else {
+        document.getElementById("recipeImageBase64").value = "";
+        document.getElementById("recipeImagePreview").src = "";
+        document.getElementById("recipeImagePreview").classList.add("hidden");
+        document.getElementById("recipeEmojiPreview").classList.remove("hidden");
+        document.getElementById("btnRemoveRecipeImg").classList.add("hidden");
+      }
+    }
+
+    function updateEmojiPreview(type) {
+      if (type === "ing") {
+        const val = document.getElementById("ingEmoji").value || "🍂";
+        document.getElementById("ingEmojiPreview").innerText = val;
+      } else {
+        const val = document.getElementById("recipeEmoji").value || "🧋";
+        document.getElementById("recipeEmojiPreview").innerText = val;
+      }
+    }
+
+    // Helper แสดงผล Avatar (รูปภาพ หรือ Fallback เป็น Emoji)
+    function renderVisualThumb(image, emoji, sizeClass = "w-12 h-12") {
+      if (image && String(image).startsWith("data:image")) {
+        return `<img src="${image}" class="${sizeClass} object-cover rounded-xl shadow-sm border border-slate-100" onerror="this.outerHTML='<span class=\\'text-2xl\\'>${emoji || '🧋'}</span>'">`;
+      }
+      return `<span class="text-3xl">${emoji || '🧋'}</span>`;
+    }
+
+    /**
+     * =========================================================================
+     * FETCHING DATA & API
+     * =========================================================================
+     */
+    async function refreshData() {
+      const badge = document.getElementById("dbStatusBadge");
+      badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1 animate-pulse"></span>กำลังโหลดจาก Google Sheets...`;
+
+      if (!API_URL) {
+        badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-slate-300 mr-1"></span>ยังไม่ได้ใส่ API URL`;
+        renderAll();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}?action=getAll`);
+        const json = await res.json();
+        if (json.success && json.data) {
+          db = json.data;
+          badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>เชื่อมต่อ Google Sheets แล้ว`;
+          showToast("เชื่อมต่อข้อมูลสำเร็จ", "success");
+        } else {
+          throw new Error(json.error || "ไม่สามารถอ่านข้อมูลได้");
+        }
+      } catch (err) {
+        console.warn("Fetch failed:", err);
+        badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-rose-500 mr-1"></span>เชื่อมต่อไม่สำเร็จ`;
+        showToast("ไม่สามารถเชื่อมต่อ Sheets ได้", "error");
+      }
+
+      renderAll();
+    }
+
+    function renderAll() {
+      renderPOS();
+      renderIngredients();
+      renderRecipes();
+      renderSales();
+    }
+
+    /**
+     * =========================================================================
+     * 1. POS LOGIC & RENDERING
+     * =========================================================================
+     */
+    function renderPOS() {
+      const posGrid = document.getElementById("posGrid");
+      const activeRecipes = db.recipes.filter(r => r.Status === "Active");
+
+      if (activeRecipes.length === 0) {
+        posGrid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+            <p class="text-3xl mb-2">🍹</p>
+            <p class="text-sm font-medium">ยังไม่มีเมนูที่ตั้งสถานะเป็น "Active"</p>
+            <p class="text-xs text-slate-400 mt-1">ไปที่แท็บ "จัดสูตร" เพื่อสร้างเมนูและเปิดสถานะพร้อมขาย</p>
+          </div>
+        `;
+        return;
+      }
+
+      posGrid.innerHTML = activeRecipes.map(recipe => {
+        const cost = calculateRecipeCost(recipe.ID);
+        const thumbHtml = renderVisualThumb(recipe.Image, recipe.Emoji, "w-14 h-14");
+
+        return `
+          <div onclick="addToCart('${recipe.ID}')" class="bg-white rounded-2xl border border-slate-200 p-4 hover:border-slate-400 hover:shadow-md active:scale-95 transition cursor-pointer flex flex-col justify-between">
+            <div>
+              <div class="mb-3">${thumbHtml}</div>
+              <h4 class="font-bold text-slate-900 text-sm leading-tight">${recipe.Name}</h4>
+            </div>
+            <div class="mt-4 pt-2 border-t border-slate-100 flex items-baseline justify-between">
+              <span class="text-[11px] text-slate-400 font-normal">ทุน ~฿${cost.toFixed(1)}</span>
+              <span class="text-base font-black text-slate-900">฿${recipe.SellingPrice}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function addToCart(recipeId) {
+      const recipe = db.recipes.find(r => r.ID === recipeId);
+      if (!recipe) return;
+
+      const existing = cart.find(c => c.recipeId === recipeId);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        const cost = calculateRecipeCost(recipeId);
+        const itemsUsed = db.recipe_items
+          .filter(ri => ri.RecipeID === recipeId)
+          .map(ri => ({
+            ingredientId: ri.IngredientID,
+            qty: parseFloat(ri.QuantityUsed) || 0
+          }));
+
+        cart.push({
+          recipeId: recipe.ID,
+          name: recipe.Name,
+          emoji: recipe.Emoji || "🍹",
+          image: recipe.Image || "",
+          price: parseFloat(recipe.SellingPrice) || 0,
+          cost: cost,
+          qty: 1,
+          itemsUsed: itemsUsed
+        });
+      }
+
+      renderCart();
+    }
+
+    function changeCartQty(recipeId, delta) {
+      const item = cart.find(c => c.recipeId === recipeId);
+      if (!item) return;
+      item.qty += delta;
+      if (item.qty <= 0) {
+        cart = cart.filter(c => c.recipeId !== recipeId);
+      }
+      renderCart();
+    }
+
+    function clearCart() {
+      cart = [];
+      renderCart();
+    }
+
+    function renderCart() {
+      const container = document.getElementById("cartItemsList");
+      const btnCheckout = document.getElementById("btnCheckout");
+      const countBadge = document.getElementById("cartCountBadge");
+
+      const totalItems = cart.reduce((sum, i) => sum + i.qty, 0);
+      countBadge.innerText = totalItems;
+
+      if (cart.length === 0) {
+        container.innerHTML = `
+          <div class="py-8 text-center text-slate-400 text-xs">
+            แตะเลือกเมนูทางซ้าย เพื่อเริ่มการขาย
+          </div>
+        `;
+        document.getElementById("cartTotalRevenueText").innerText = "฿0";
+        document.getElementById("cartTotalCostText").innerText = "฿0.00";
+        btnCheckout.disabled = true;
+        return;
+      }
+
+      let totalRev = 0;
+      let totalCost = 0;
+
+      container.innerHTML = cart.map(item => {
+        const itemRev = item.price * item.qty;
+        const itemCost = item.cost * item.qty;
+        totalRev += itemRev;
+        totalCost += itemCost;
+        const thumb = renderVisualThumb(item.image, item.emoji, "w-8 h-8");
+
+        return `
+          <div class="py-2.5 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <div class="shrink-0">${thumb}</div>
+              <div>
+                <p class="font-bold text-slate-800">${item.name}</p>
+                <p class="text-slate-400 text-[10px]">฿${item.price} / แก้ว</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+                <button onclick="changeCartQty('${item.recipeId}', -1)" class="px-2 py-0.5 hover:bg-slate-200 text-slate-600 font-bold">-</button>
+                <span class="px-2 font-bold text-slate-900">${item.qty}</span>
+                <button onclick="changeCartQty('${item.recipeId}', 1)" class="px-2 py-0.5 hover:bg-slate-200 text-slate-600 font-bold">+</button>
+              </div>
+              <span class="font-bold text-slate-900 w-12 text-right">฿${itemRev}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("cartTotalRevenueText").innerText = `฿${totalRev.toLocaleString()}`;
+      document.getElementById("cartTotalCostText").innerText = `฿${totalCost.toFixed(2)}`;
+      btnCheckout.disabled = false;
+    }
+
+    async function processCheckout() {
+      if (cart.length === 0) return;
+
+      const btnCheckout = document.getElementById("btnCheckout");
+      btnCheckout.disabled = true;
+      btnCheckout.innerHTML = `<span>กำลังบันทึกและตัดสต็อก...</span> ⏳`;
+
+      const salePayload = cart.map(item => ({
+        recipeId: item.recipeId,
+        recipeName: item.name,
+        qtySold: item.qty,
+        totalRevenue: item.price * item.qty,
+        totalCost: Math.round(item.cost * item.qty * 100) / 100,
+        itemsUsed: item.itemsUsed
+      }));
+
+      try {
+        if (!API_URL) throw new Error("กรุณาใส่ Web App URL ในหน้าตั้งค่าก่อนกดขาย");
+
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "recordSale",
+            data: salePayload
+          })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || "เกิดข้อผิดพลาดในการบันทึก");
+
+        showToast("บันทึกการขายและตัดสต็อกสำเร็จ!", "success");
+        clearCart();
+        await refreshData();
+      } catch (err) {
+        alert("เกิดข้อผิดพลาด: " + err.message);
+        showToast("บันทึกไม่สำเร็จ", "error");
+      } finally {
+        btnCheckout.disabled = false;
+        btnCheckout.innerHTML = `<span>ยืนยันการขาย & ตัดสต็อก</span> <span>⚡</span>`;
+      }
+    }
+
+    /**
+     * =========================================================================
+     * 2. INGREDIENTS LOGIC & RENDERING
+     * =========================================================================
+     */
+    function renderIngredients() {
+      const container = document.getElementById("ingredientsList");
+      if (db.ingredients.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+            <p class="text-3xl mb-2">📦</p>
+            <p class="text-sm font-medium">ยังไม่มีรายการวัตถุดิบในระบบ</p>
+            <p class="text-xs text-slate-400 mt-1">กดปุ่ม "+ เพิ่มวัตถุดิบใหม่" ด้านบนเพื่อเริ่มใส่ข้อมูลจริง</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = db.ingredients.map(ing => {
+        const isLow = Number(ing.CurrentStock) < 200;
+        const thumb = renderVisualThumb(ing.Image, ing.Emoji, "w-12 h-12");
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-2.5">
+                  <div class="shrink-0">${thumb}</div>
+                  <div>
+                    <h4 class="font-bold text-slate-900 text-sm">${ing.Name}</h4>
+                    <span class="text-[10px] text-slate-400 font-mono">${ing.ID}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button onclick="openIngredientModal('${ing.ID}')" class="text-xs text-slate-500 hover:text-slate-800 p-1 rounded-lg">
+                    ✏️
+                  </button>
+                  <button onclick="openAdjustStockModal('${ing.ID}')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-medium">
+                    ปรับยอด
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-4 p-3 rounded-xl ${isLow ? 'bg-rose-50 border border-rose-200' : 'bg-slate-50 border border-slate-100'}">
+                <div class="flex justify-between items-baseline">
+                  <span class="text-xs ${isLow ? 'text-rose-600 font-semibold' : 'text-slate-500'}">สต็อกคงเหลือ</span>
+                  <span class="text-lg font-black ${isLow ? 'text-rose-600' : 'text-slate-900'}">
+                    ${Number(ing.CurrentStock).toLocaleString()} <span class="text-xs font-normal text-slate-500">${ing.RecipeUnit}</span>
+                  </span>
+                </div>
+                ${isLow ? '<p class="text-[10px] text-rose-500 mt-1 font-medium">⚠️ สต็อกใกล้หมดแล้ว</p>' : ''}
+              </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 text-[11px] text-slate-500">
+              <div>
+                <span>ซื้อมา: </span>
+                <span class="font-medium text-slate-700">฿${ing.PurchasePrice} / ${ing.PurchaseUnit}</span>
+              </div>
+              <div class="text-right">
+                <span>ต้นทุนใช้: </span>
+                <span class="font-bold text-slate-900">฿${Number(ing.CostPerUnit).toFixed(3)} / ${ing.RecipeUnit}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function openIngredientModal(id = "") {
+      const modal = document.getElementById("modalIngredient");
+      const title = document.getElementById("modalIngTitle");
+      const form = document.getElementById("ingredientForm");
+
+      removeImage("ing");
+
+      if (id) {
+        title.innerText = "แก้ไขวัตถุดิบ";
+        const ing = db.ingredients.find(i => i.ID === id);
+        if (ing) {
+          document.getElementById("ingId").value = ing.ID;
+          document.getElementById("ingEmoji").value = ing.Emoji || "🍂";
+          document.getElementById("ingName").value = ing.Name;
+          document.getElementById("ingPurchasePrice").value = ing.PurchasePrice;
+          document.getElementById("ingPurchaseQty").value = ing.PurchaseQty;
+          document.getElementById("ingPurchaseUnit").value = ing.PurchaseUnit;
+          document.getElementById("ingRecipeUnit").value = ing.RecipeUnit;
+          document.getElementById("ingCurrentStock").value = ing.CurrentStock;
+
+          if (ing.Image && String(ing.Image).startsWith("data:image")) {
+            document.getElementById("ingImageBase64").value = ing.Image;
+            document.getElementById("ingImagePreview").src = ing.Image;
+            document.getElementById("ingImagePreview").classList.remove("hidden");
+            document.getElementById("ingEmojiPreview").classList.add("hidden");
+            document.getElementById("btnRemoveIngImg").classList.remove("hidden");
+          }
+        }
+      } else {
+        title.innerText = "เพิ่มวัตถุดิบใหม่";
+        form.reset();
+        document.getElementById("ingId").value = "";
+        document.getElementById("ingEmoji").value = "🍂";
+      }
+
+      updateEmojiPreview("ing");
+      calcUnitCostPreview();
+      modal.classList.remove("hidden");
+    }
+
+    function calcUnitCostPreview() {
+      const price = parseFloat(document.getElementById("ingPurchasePrice").value) || 0;
+      const qty = parseFloat(document.getElementById("ingPurchaseQty").value) || 1;
+      const unit = document.getElementById("ingRecipeUnit").value;
+      const costPerUnit = qty > 0 ? (price / qty) : 0;
+      document.getElementById("ingCostPerUnitPreview").value = `฿${costPerUnit.toFixed(4)} / ${unit}`;
+    }
+
+    async function saveIngredientSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById("ingId").value;
+      const purchasePrice = parseFloat(document.getElementById("ingPurchasePrice").value) || 0;
+      const purchaseQty = parseFloat(document.getElementById("ingPurchaseQty").value) || 1;
+      const recipeUnit = document.getElementById("ingRecipeUnit").value;
+      const costPerUnit = purchaseQty > 0 ? (purchasePrice / purchaseQty) : 0;
+
+      const payload = {
+        id: id || ("ING_" + String(Date.now()).slice(-4)),
+        name: document.getElementById("ingName").value,
+        emoji: document.getElementById("ingEmoji").value || "🍂",
+        image: document.getElementById("ingImageBase64").value || "",
+        purchasePrice: purchasePrice,
+        purchaseQty: purchaseQty,
+        purchaseUnit: document.getElementById("ingPurchaseUnit").value,
+        recipeUnit: recipeUnit,
+        costPerUnit: Math.round(costPerUnit * 10000) / 10000,
+        currentStock: parseFloat(document.getElementById("ingCurrentStock").value) || 0
+      };
+
+      closeModal("modalIngredient");
+
+      try {
+        if (!API_URL) throw new Error("กรุณาเชื่อมต่อ Web App URL ก่อนบันทึก");
+        showToast("กำลังบันทึกลงชีท...", "info");
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "saveIngredient", data: payload })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        await refreshData();
+        showToast("บันทึกวัตถุดิบสำเร็จ", "success");
+      } catch (err) {
+        alert("เกิดข้อผิดพลาด: " + err.message);
+      }
+    }
+
+    function openAdjustStockModal(id) {
+      const ing = db.ingredients.find(i => i.ID === id);
+      if (!ing) return;
+      document.getElementById("stockAdjId").value = ing.ID;
+      document.getElementById("stockAdjTitle").innerText = `${ing.Emoji || '📦'} ปรับสต็อก: ${ing.Name}`;
+      document.getElementById("stockAdjSubtitle").innerText = `สต็อกเดิม: ${ing.CurrentStock} ${ing.RecipeUnit}`;
+      document.getElementById("stockAdjInput").value = ing.CurrentStock;
+      document.getElementById("modalAdjustStock").classList.remove("hidden");
+    }
+
+    async function confirmAdjustStock() {
+      const id = document.getElementById("stockAdjId").value;
+      const newStock = parseFloat(document.getElementById("stockAdjInput").value) || 0;
+      closeModal("modalAdjustStock");
+
+      try {
+        if (!API_URL) throw new Error("กรุณาเชื่อมต่อ Web App URL ก่อน");
+        showToast("กำลังอัปเดตสต็อก...", "info");
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "updateStock", data: { id, newStock } })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        await refreshData();
+        showToast("อัปเดตสต็อกเรียบร้อย", "success");
+      } catch (err) {
+        alert("เกิดข้อผิดพลาด: " + err.message);
+      }
+    }
+
+    /**
+     * =========================================================================
+     * 3. RECIPES & RECIPE BUILDER (จัดสูตรเลโก้)
+     * =========================================================================
+     */
+    let currentRecipeFilter = "all";
+
+    function filterRecipes(filter) {
+      currentRecipeFilter = filter;
+      document.querySelectorAll(".recipe-filter-btn").forEach(btn => {
+        if (btn.dataset.filter === filter) {
+          btn.classList.add("bg-slate-900", "text-white");
+          btn.classList.remove("bg-white", "text-slate-700");
+        } else {
+          btn.classList.remove("bg-slate-900", "text-white");
+          btn.classList.add("bg-white", "text-slate-700");
+        }
+      });
+      renderRecipes();
+    }
+
+    function calculateRecipeCost(recipeId) {
+      const items = db.recipe_items.filter(ri => ri.RecipeID === recipeId);
+      let totalCost = 0;
+      items.forEach(it => {
+        const ing = db.ingredients.find(i => i.ID === it.IngredientID);
+        if (ing) {
+          totalCost += (parseFloat(it.QuantityUsed) || 0) * (parseFloat(ing.CostPerUnit) || 0);
+        }
+      });
+      return totalCost;
+    }
+
+    function renderRecipes() {
+      const grid = document.getElementById("recipesGrid");
+
+      document.getElementById("count-all").innerText = db.recipes.length;
+      document.getElementById("count-active").innerText = db.recipes.filter(r => r.Status === "Active").length;
+      document.getElementById("count-draft").innerText = db.recipes.filter(r => r.Status === "Draft").length;
+      document.getElementById("count-inactive").innerText = db.recipes.filter(r => r.Status === "Inactive").length;
+
+      let list = db.recipes;
+      if (currentRecipeFilter !== "all") {
+        list = list.filter(r => r.Status === currentRecipeFilter);
+      }
+
+      if (list.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+            <p class="text-3xl mb-2">🥣</p>
+            <p class="text-sm font-medium">ยังไม่มีสูตรเมนูในหมวดนี้</p>
+            <p class="text-xs text-slate-400 mt-1">กดปุ่ม "+ สร้างสูตรเมนูใหม่" ด้านบนได้เลย</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = list.map(recipe => {
+        const cost = calculateRecipeCost(recipe.ID);
+        const price = parseFloat(recipe.SellingPrice) || 0;
+        const profit = price - cost;
+        const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
+        const thumb = renderVisualThumb(recipe.Image, recipe.Emoji, "w-14 h-14");
+
+        let statusBadge = "";
+        if (recipe.Status === "Active") {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">✅ Active พร้อมขาย</span>`;
+        } else if (recipe.Status === "Draft") {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">🧪 Draft (R&D)</span>`;
+        } else {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">⏸️ Inactive</span>`;
+        }
+
+        const items = db.recipe_items.filter(ri => ri.RecipeID === recipe.ID);
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between mb-3">
+                ${thumb}
+                ${statusBadge}
+              </div>
+              <h3 class="font-bold text-slate-900 text-base">${recipe.Name}</h3>
+              <p class="text-[10px] text-slate-400 font-mono mb-3">${recipe.ID}</p>
+
+              <div class="space-y-1 mb-4 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ส่วนผสม (${items.length} รายการ)</p>
+                ${items.map(it => {
+                  const ing = db.ingredients.find(i => i.ID === it.IngredientID);
+                  return `<div class="flex justify-between">
+                    <span>${ing ? ing.Name : it.IngredientID}</span>
+                    <span class="font-medium text-slate-800">${it.QuantityUsed} ${ing ? ing.RecipeUnit : ''}</span>
+                  </div>`;
+                }).join("")}
+              </div>
+            </div>
+
+            <div>
+              <div class="pt-3 border-t border-slate-100 grid grid-cols-3 text-center text-xs">
+                <div>
+                  <span class="text-[10px] text-slate-400 block">ต้นทุน</span>
+                  <span class="font-bold text-slate-700">฿${cost.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block">ราคาขาย</span>
+                  <span class="font-bold text-slate-900">฿${price}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block">กำไร/มาร์จิ้น</span>
+                  <span class="font-bold ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}">
+                    ฿${profit.toFixed(1)} <span class="text-[9px]">(${margin}%)</span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+                <button onclick="editRecipe('${recipe.ID}')" class="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">
+                  ✏️ แก้ไขสูตร
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function openRecipeModal(recipeId = "") {
+      const modal = document.getElementById("modalRecipe");
+      const title = document.getElementById("modalRecipeTitle");
+      const form = document.getElementById("recipeForm");
+      const container = document.getElementById("recipeItemsContainer");
+      container.innerHTML = "";
+
+      removeImage("recipe");
+
+      if (recipeId) {
+        title.innerText = "แก้ไขสูตรเมนู";
+        const r = db.recipes.find(item => item.ID === recipeId);
+        if (r) {
+          document.getElementById("recipeId").value = r.ID;
+          document.getElementById("recipeEmoji").value = r.Emoji || "🧋";
+          document.getElementById("recipeName").value = r.Name;
+          document.getElementById("recipeSellingPrice").value = r.SellingPrice;
+          document.getElementById("recipeStatus").value = r.Status;
+
+          if (r.Image && String(r.Image).startsWith("data:image")) {
+            document.getElementById("recipeImageBase64").value = r.Image;
+            document.getElementById("recipeImagePreview").src = r.Image;
+            document.getElementById("recipeImagePreview").classList.remove("hidden");
+            document.getElementById("recipeEmojiPreview").classList.add("hidden");
+            document.getElementById("btnRemoveRecipeImg").classList.remove("hidden");
+          }
+
+          const items = db.recipe_items.filter(ri => ri.RecipeID === recipeId);
+          if (items.length > 0) {
+            items.forEach(it => addRecipeItemRow(it.IngredientID, it.QuantityUsed));
+          } else {
+            addRecipeItemRow();
+          }
+        }
+      } else {
+        title.innerText = "สร้างสูตรเมนูใหม่";
+        form.reset();
+        document.getElementById("recipeId").value = "";
+        document.getElementById("recipeEmoji").value = "🧋";
+        document.getElementById("recipeSellingPrice").value = "0";
+        document.getElementById("recipeStatus").value = "Draft";
+        addRecipeItemRow();
+      }
+
+      updateEmojiPreview("recipe");
+      validateRecipeStatus();
+      calcRecipeCostTotal();
+      modal.classList.remove("hidden");
+    }
+
+    function editRecipe(id) {
+      openRecipeModal(id);
+    }
+
+    function addRecipeItemRow(ingId = "", qtyBase = 0) {
+      const container = document.getElementById("recipeItemsContainer");
+      const rowDiv = document.createElement("div");
+      rowDiv.className = "recipe-item-row flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200";
+
+      const ingOptions = db.ingredients.map(ing => 
+        `<option value="${ing.ID}" ${ing.ID === ingId ? 'selected' : ''}>${ing.Emoji || '📦'} ${ing.Name} (${ing.RecipeUnit})</option>`
+      ).join("");
+
+      rowDiv.innerHTML = `
+        <select class="ing-select flex-1 p-1.5 rounded border border-slate-200 text-xs bg-white" onchange="calcRecipeCostTotal()">
+          <option value="">-- เลือกวัตถุดิบ --</option>
+          ${ingOptions}
+        </select>
+        <input type="number" step="any" class="qty-input w-20 p-1.5 rounded border border-slate-200 text-xs font-semibold" value="${qtyBase || ''}" placeholder="ปริมาณ" oninput="calcRecipeCostTotal()">
+        <select class="unit-select w-28 p-1.5 rounded border border-slate-200 text-xs bg-slate-50" onchange="handleUnitConverterChange(this)">
+          <option value="g_ml">กรัม / มล.</option>
+          <option value="tbsp">ช้อนโต๊ะ (15)</option>
+          <option value="tsp">ช้อนชา (5)</option>
+          <option value="oz">ออนซ์ (30)</option>
+        </select>
+        <button type="button" onclick="this.closest('.recipe-item-row').remove(); calcRecipeCostTotal();" class="text-rose-500 hover:text-rose-700 px-1 font-bold text-base">✕</button>
+      `;
+
+      container.appendChild(rowDiv);
+      calcRecipeCostTotal();
+    }
+
+    function handleUnitConverterChange(selectElem) {
+      const row = selectElem.closest(".recipe-item-row");
+      const qtyInput = row.querySelector(".qty-input");
+      const currentVal = parseFloat(qtyInput.value) || 0;
+      const unit = selectElem.value;
+
+      if (unit !== "g_ml" && currentVal > 0) {
+        const multiplier = UNIT_MULTIPLIERS[unit] || 1;
+        const converted = currentVal * multiplier;
+        qtyInput.value = converted;
+        selectElem.value = "g_ml";
+        showToast(`แปลงหน่วย: ${currentVal} ${unit} = ${converted} กรัม/มล.`, "info");
+      }
+      calcRecipeCostTotal();
+    }
+
+    function calcRecipeCostTotal() {
+      const rows = document.querySelectorAll(".recipe-item-row");
+      let totalCost = 0;
+
+      rows.forEach(row => {
+        const ingId = row.querySelector(".ing-select").value;
+        const qty = parseFloat(row.querySelector(".qty-input").value) || 0;
+        const ing = db.ingredients.find(i => i.ID === ingId);
+        if (ing && qty > 0) {
+          totalCost += qty * (parseFloat(ing.CostPerUnit) || 0);
+        }
+      });
+
+      const price = parseFloat(document.getElementById("recipeSellingPrice").value) || 0;
+      const profit = price - totalCost;
+      const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
+
+      document.getElementById("recipeTotalCostPreview").innerText = `฿${totalCost.toFixed(2)}`;
+      document.getElementById("recipeProfitPreview").innerText = `฿${profit.toFixed(2)}`;
+      document.getElementById("recipeMarginPreview").innerText = `${margin}%`;
+    }
+
+    function validateRecipeStatus() {
+      const status = document.getElementById("recipeStatus").value;
+      const priceInput = document.getElementById("recipeSellingPrice");
+      const notice = document.getElementById("priceNotice");
+
+      if (status === "Active") {
+        if (parseFloat(priceInput.value) <= 0) {
+          notice.innerText = "⚠️ สถานะ Active ต้องกำหนดราคาขายมากกว่า 0 บาท";
+        } else {
+          notice.innerText = "";
+        }
+      } else if (status === "Draft") {
+        notice.innerText = "💡 โหมดทดลอง (Draft) อนุญาตให้ราคาขาย = 0 ได้ เพื่อดูต้นทุน R&D";
+      } else {
+        notice.innerText = "";
+      }
+    }
+
+    async function saveRecipeSubmit(e) {
+      e.preventDefault();
+      const status = document.getElementById("recipeStatus").value;
+      const price = parseFloat(document.getElementById("recipeSellingPrice").value) || 0;
+
+      if (status === "Active" && price <= 0) {
+        alert("สูตรที่เปิดสถานะ 'Active' ต้องกำหนดราคาขายมากกว่า 0 บาทครับ หากยังไม่พร้อมขายกรุณาเลือกเป็น 'Draft'");
+        return;
+      }
+
+      const items = [];
+      document.querySelectorAll(".recipe-item-row").forEach(row => {
+        const ingId = row.querySelector(".ing-select").value;
+        const qty = parseFloat(row.querySelector(".qty-input").value) || 0;
+        if (ingId && qty > 0) {
+          items.push({ ingredientId: ingId, quantityUsed: qty });
+        }
+      });
+
+      const payload = {
+        id: document.getElementById("recipeId").value || ("REC_" + String(Date.now()).slice(-4)),
+        name: document.getElementById("recipeName").value,
+        emoji: document.getElementById("recipeEmoji").value || "🧋",
+        image: document.getElementById("recipeImageBase64").value || "",
+        sellingPrice: price,
+        status: status,
+        items: items
+      };
+
+      closeModal("modalRecipe");
+
+      try {
+        if (!API_URL) throw new Error("กรุณาเชื่อมต่อ Web App URL ก่อน");
+        showToast("กำลังบันทึกสูตรลงชีท...", "info");
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "saveRecipe", data: payload })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        await refreshData();
+        showToast("บันทึกสูตรเรียบร้อยแล้ว!", "success");
+      } catch (err) {
+        alert("เกิดข้อผิดพลาด: " + err.message);
+      }
+    }
+
+    /**
+     * =========================================================================
+     * 4. SALES LOG & DASHBOARD RENDERING
+     * =========================================================================
+     */
+    function renderSales() {
+      const tableBody = document.getElementById("salesTableBody");
+      const list = db.sales_log || [];
+
+      let totalRev = 0;
+      let totalCost = 0;
+
+      if (list.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">ยังไม่มีประวัติการขาย</td></tr>`;
+      } else {
+        tableBody.innerHTML = list.map(item => {
+          const rev = parseFloat(item.TotalRevenue) || 0;
+          const cost = parseFloat(item.TotalCost) || 0;
+          const profit = rev - cost;
+          totalRev += rev;
+          totalCost += cost;
+
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 text-slate-500 font-mono">${item.Timestamp}</td>
+              <td class="p-3 font-semibold text-slate-900">${item.RecipeName || item.RecipeID}</td>
+              <td class="p-3 text-center font-bold text-slate-700">${item.QtySold}</td>
+              <td class="p-3 text-right font-bold text-slate-900">฿${rev.toLocaleString()}</td>
+              <td class="p-3 text-right text-rose-600">฿${cost.toFixed(2)}</td>
+              <td class="p-3 text-right font-bold text-emerald-600">฿${profit.toFixed(2)}</td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      document.getElementById("statTotalRev").innerText = `฿${totalRev.toLocaleString()}`;
+      document.getElementById("statTotalCost").innerText = `฿${totalCost.toFixed(2)}`;
+      document.getElementById("statTotalProfit").innerText = `฿${(totalRev - totalCost).toFixed(2)}`;
+    }
+
+    /**
+     * =========================================================================
+     * 5. SETTINGS & CLEAR DATA
+     * =========================================================================
+     */
+    function saveApiUrl() {
+      const val = document.getElementById("apiEndpointInput").value.trim();
+      API_URL = val;
+      localStorage.setItem("fnb_gas_api_url", val);
+      refreshData();
+      showToast("บันทึก Web App URL เรียบร้อย", "success");
+    }
+
+    async function initSheetsThroughApi() {
+      if (!API_URL) {
+        alert("กรุณากรอกและบันทึก Google Apps Script Web App URL ก่อนครับ");
+        return;
+      }
+      if (!confirm("ต้องการสั่งให้ Google Apps Script สร้างโครงสร้าง 4 ชีทหลักแบบสะอาด (พร้อมรับข้อมูลจริง) หรือไม่?")) {
+        return;
+      }
+
+      const msg = document.getElementById("settingsMsg");
+      msg.className = "mt-4 p-3 rounded-xl text-xs bg-amber-50 text-amber-800 block";
+      msg.innerText = "กำลังสั่งสร้างชีทใน Google Sheets กรุณารอสักครู่...";
+
+      try {
+        const res = await fetch(`${API_URL}?action=init`);
+        const json = await res.json();
+        if (json.success) {
+          msg.className = "mt-4 p-3 rounded-xl text-xs bg-emerald-50 text-emerald-800 block";
+          msg.innerText = "✅ " + json.message;
+          refreshData();
+        } else {
+          throw new Error(json.error || "เกิดข้อผิดพลาด");
+        }
+      } catch (err) {
+        msg.className = "mt-4 p-3 rounded-xl text-xs bg-rose-50 text-rose-800 block";
+        msg.innerText = "❌ เกิดข้อผิดพลาด: " + err.message;
+      }
+    }
+
+    async function clearDatabaseAll() {
+      if (!API_URL) {
+        alert("กรุณาใส่ Web App URL ก่อนสั่งล้างข้อมูล");
+        return;
+      }
+      if (!confirm("⚠️ คุณแน่ใจหรือไม่ที่จะล้างข้อมูลทั้งหมดใน Google Sheets? การกระทำนี้จะลบข้อมูลแถวทั้งหมดในชีททั้ง 4 แผ่น (ยกเว้นหัวตาราง)")) {
+        return;
+      }
+
+      showToast("กำลังล้างข้อมูลใน Google Sheets...", "info");
+      try {
+        const res = await fetch(`${API_URL}?action=clearData`);
+        const json = await res.json();
+        if (json.success) {
+          showToast(json.message, "success");
+          db = { ingredients: [], recipes: [], recipe_items: [], sales_log: [] };
+          renderAll();
+        } else {
+          throw new Error(json.error);
+        }
+      } catch (err) {
+        alert("ล้างข้อมูลไม่สำเร็จ: " + err.message);
+      }
+    }
+
+    /**
+     * =========================================================================
+     * UI NAVIGATION & MODAL HELPERS
+     * =========================================================================
+     */
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+      document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.classList.remove("text-slate-900", "font-semibold");
+        btn.classList.add("text-slate-400", "font-normal");
+      });
+
+      const activeSection = document.getElementById(`tab-${tabId}`);
+      if (activeSection) activeSection.classList.remove("hidden");
+
+      const activeNavBtn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+      if (activeNavBtn) {
+        activeNavBtn.classList.remove("text-slate-400", "font-normal");
+        activeNavBtn.classList.add("text-slate-900", "font-semibold");
+      }
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add("hidden");
+    }
+
+    function showToast(msg, type = "success") {
+      const toast = document.getElementById("toast");
+      const toastMsg = document.getElementById("toastMsg");
+      const toastIcon = document.getElementById("toastIcon");
+
+      toastMsg.innerText = msg;
+      if (type === "success") toastIcon.innerText = "✅";
+      else if (type === "error") toastIcon.innerText = "❌";
+      else toastIcon.innerText = "ℹ️";
+
+      toast.classList.remove("translate-y-[-150%]");
+      setTimeout(() => {
+        toast.classList.add("translate-y-[-150%]");
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
