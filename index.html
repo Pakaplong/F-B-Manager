@@ -383,85 +383,156 @@
           <input type="text" id="ingName" required placeholder="เช่น ผงชาไทยพรีเมียม" class="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm">
         </div>
 
-        <div class="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-100">
-          <div class="flex justify-between items-center">
-            <p class="font-semibold text-slate-800 text-[11px]">📦 ข้อมูลตอนซื้อ (จัดซื้อ)</p>
-            <span class="text-[10px] text-blue-600 font-medium">✨ แปลงหน่วยอัตโนมัติ</span>
-          </div>
+        <!-- ================= แผงที่ 1: สำหรับวัตถุดิบทั่วไป (นับสต็อกเป็นแพ็ก/ถุง) ================= -->
+        <div id="sectionPackagingInfo" class="space-y-4">
+          <div class="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-100">
+            <div class="flex justify-between items-center">
+              <p class="font-semibold text-slate-800 text-[11px]">📦 ข้อมูลตอนซื้อ (จัดซื้อ)</p>
+              <span class="text-[10px] text-blue-600 font-medium">✨ แปลงหน่วยอัตโนมัติ</span>
+            </div>
 
-          <!-- ตัวช่วยแปลงหน่วยจากฉลากสินค้า (เช่น ลิตร, กก. -> มล., กรัม) -->
-          <div class="p-2.5 bg-blue-50/70 border border-blue-200/60 rounded-xl space-y-2">
-            <label class="block text-[11px] font-bold text-blue-900">ระบุขนาดตามฉลากสินค้า (คนซื้อไม่ต้องคิดเลข):</label>
-            <div class="grid grid-cols-5 gap-2 items-center">
-              <div class="col-span-2">
-                <input type="number" step="any" id="ingLabelQty" placeholder="เช่น 1 หรือ 500" value="1" oninput="convertLabelUnitToRecipeUnit()" class="w-full p-2 rounded-lg border border-blue-200 bg-white font-bold text-slate-900 text-xs">
+            <!-- ตัวช่วยแปลงหน่วยจากฉลากสินค้า (เช่น ลิตร, กก. -> มล., กรัม) -->
+            <div class="p-2.5 bg-blue-50/70 border border-blue-200/60 rounded-xl space-y-2">
+              <label class="block text-[11px] font-bold text-blue-900">ระบุขนาดตามฉลากสินค้า (คนซื้อไม่ต้องคิดเลข):</label>
+              <div class="grid grid-cols-5 gap-2 items-center">
+                <div class="col-span-2">
+                  <input type="number" step="any" id="ingLabelQty" placeholder="เช่น 1 หรือ 500" value="1" oninput="convertLabelUnitToRecipeUnit()" class="w-full p-2 rounded-lg border border-blue-200 bg-white font-bold text-slate-900 text-xs">
+                </div>
+                <div class="col-span-3">
+                  <select id="ingLabelUnitSelect" onchange="convertLabelUnitToRecipeUnit()" class="w-full p-2 rounded-lg border border-blue-200 bg-white text-xs font-semibold text-slate-800">
+                    <option value="custom">-- เลือกหน่วยตามฉลาก --</option>
+                    <option value="liter">🥛 ลิตร (L) ➡️ 1,000 มล.</option>
+                    <option value="kg">🌾 กิโลกรัม (กก.) ➡️ 1,000 กรัม</option>
+                    <option value="ml">มิลลิลิตร (ml)</option>
+                    <option value="g">กรัม (g)</option>
+                    <option value="piece">ชิ้น / ฟอง / กล่อง</option>
+                  </select>
+                </div>
               </div>
-              <div class="col-span-3">
-                <select id="ingLabelUnitSelect" onchange="convertLabelUnitToRecipeUnit()" class="w-full p-2 rounded-lg border border-blue-200 bg-white text-xs font-semibold text-slate-800">
-                  <option value="custom">-- เลือกหน่วยตามฉลาก --</option>
-                  <option value="liter">🥛 ลิตร (L) ➡️ 1,000 มล.</option>
-                  <option value="kg">🌾 กิโลกรัม (กก.) ➡️ 1,000 กรัม</option>
-                  <option value="ml">มิลลิลิตร (ml)</option>
-                  <option value="g">กรัม (g)</option>
-                  <option value="piece">ชิ้น / ฟอง / กล่อง</option>
+
+              <!-- ปุ่มลัดยอดนิยม แตะทีเดียวแปลงให้เลย -->
+              <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span class="text-[10px] text-blue-700 font-medium">ปุ่มลัด:</span>
+                <button type="button" onclick="setLabelPreset(1, 'liter')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">🥛 1 ลิตร (1,000 ml)</button>
+                <button type="button" onclick="setLabelPreset(1, 'kg')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">🌾 1 กก. (1,000 g)</button>
+                <button type="button" onclick="setLabelPreset(500, 'ml')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">500 ml</button>
+                <button type="button" onclick="setLabelPreset(250, 'ml')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">250 ml</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-600 mb-1">ราคาซื้อต่อแพ็ก (บาท)</label>
+                <input type="number" step="any" id="ingPurchasePrice" oninput="calcUnitCostPreview()" required placeholder="เช่น 56" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold">
+              </div>
+              <div>
+                <label class="block text-slate-600 mb-1">ชื่อหน่วยซื้อ</label>
+                <input type="text" id="ingPurchaseUnit" placeholder="ถุง, กล่อง, แกลลอน" value="กล่อง" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs">
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-600 mb-1">ปริมาณสุทธิต่อแพ็ก (หน่วยย่อย)</label>
+                <input type="number" step="any" id="ingPurchaseQty" oninput="calcUnitCostPreview(); applyBagsToStock();" required placeholder="1000" class="w-full p-2 rounded-lg border border-slate-200 bg-white font-bold text-slate-900 text-xs">
+              </div>
+              <div>
+                <label class="block text-slate-600 mb-1">หน่วยใช้ชง (หน่วยย่อย)</label>
+                <select id="ingRecipeUnit" onchange="calcUnitCostPreview()" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold">
+                  <option value="มล.">มิลลิลิตร (ml)</option>
+                  <option value="กรัม">กรัม (g)</option>
+                  <option value="ชิ้น">ชิ้น</option>
                 </select>
               </div>
             </div>
-
-            <!-- ปุ่มลัดยอดนิยม แตะทีเดียวแปลงให้เลย -->
-            <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
-              <span class="text-[10px] text-blue-700 font-medium">ปุ่มลัด:</span>
-              <button type="button" onclick="setLabelPreset(1, 'liter')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">🥛 1 ลิตร (1,000 ml)</button>
-              <button type="button" onclick="setLabelPreset(1, 'kg')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">🌾 1 กก. (1,000 g)</button>
-              <button type="button" onclick="setLabelPreset(500, 'ml')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">500 ml</button>
-              <button type="button" onclick="setLabelPreset(250, 'ml')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">250 ml</button>
-            </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-slate-600 mb-1">ราคาซื้อต่อแพ็ก (บาท)</label>
-              <input type="number" step="any" id="ingPurchasePrice" oninput="calcUnitCostPreview()" required placeholder="เช่น 56" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold">
+          <div class="p-3 bg-slate-50 rounded-xl space-y-2 border border-slate-100">
+            <div class="flex justify-between items-center">
+              <label class="font-semibold text-slate-700 text-[11px]">สต็อกคงเหลือปัจจุบัน (หน่วยย่อย)</label>
+              <div class="flex items-center gap-1.5 text-[11px]">
+                <span class="text-slate-500">จำนวน</span>
+                <input type="number" id="ingBagsHelper" value="1" min="1" class="w-12 p-1 text-center border border-slate-200 rounded bg-white font-bold" oninput="applyBagsToStock()">
+                <button type="button" onclick="applyBagsToStock()" class="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 font-bold text-[10px]">
+                  คำนวณ
+                </button>
+              </div>
             </div>
-            <div>
-              <label class="block text-slate-600 mb-1">ชื่อหน่วยซื้อ</label>
-              <input type="text" id="ingPurchaseUnit" placeholder="ถุง, กล่อง, แกลลอน" value="กล่อง" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs">
-            </div>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-slate-600 mb-1">ปริมาณสุทธิต่อแพ็ก (หน่วยย่อย)</label>
-              <input type="number" step="any" id="ingPurchaseQty" oninput="calcUnitCostPreview(); applyBagsToStock();" required placeholder="1000" class="w-full p-2 rounded-lg border border-slate-200 bg-white font-bold text-slate-900 text-xs">
-            </div>
-            <div>
-              <label class="block text-slate-600 mb-1">หน่วยใช้ชง (หน่วยย่อย)</label>
-              <select id="ingRecipeUnit" onchange="calcUnitCostPreview()" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold">
-                <option value="มล.">มิลลิลิตร (ml)</option>
-                <option value="กรัม">กรัม (g)</option>
-                <option value="ชิ้น">ชิ้น</option>
-              </select>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <input type="number" step="any" id="ingCurrentStock" required placeholder="เช่น 180" class="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm font-bold bg-white">
+              </div>
+              <div>
+                <input type="text" id="ingCostPerUnitPreview" readonly value="฿0.00" class="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 font-semibold text-xs">
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="p-3 bg-slate-50 rounded-xl space-y-2 border border-slate-100">
-          <div class="flex justify-between items-center">
-            <label class="font-semibold text-slate-700 text-[11px]">สต็อกคงเหลือปัจจุบัน (หน่วยย่อย)</label>
-            <div class="flex items-center gap-1.5 text-[11px]">
-              <span class="text-slate-500">จำนวน</span>
-              <input type="number" id="ingBagsHelper" value="1" min="1" class="w-12 p-1 text-center border border-slate-200 rounded bg-white font-bold" oninput="applyBagsToStock()">
-              <button type="button" onclick="applyBagsToStock()" class="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 font-bold text-[10px]">
-                คำนวณ
-              </button>
+        <!-- ================= แผงที่ 2: UI เฉพาะสำหรับ "สถานีน้ำกรอง / ทรัพยากรหลัก" ================= -->
+        <div id="sectionWaterStationInfo" class="space-y-3 hidden">
+          <div class="p-4 bg-sky-50/70 border border-sky-200 rounded-2xl space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sky-900 text-xs flex items-center gap-1.5">
+                <span>🚰</span> ตั้งค่าต้นทุนน้ำกรอง (เครื่องกรองน้ำ):
+              </span>
             </div>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <input type="number" step="any" id="ingCurrentStock" required placeholder="เช่น 180" class="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm font-bold bg-white">
+
+            <!-- ตัวเลือกคิดต้นทุน: ฟรี 0 บาท vs คิดค่าไส้กรอง -->
+            <div class="grid grid-cols-2 gap-2 text-[11px] font-semibold">
+              <label class="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-sky-200 cursor-pointer">
+                <input type="radio" name="waterCostMode" value="free" checked onchange="toggleWaterCostMode('free')" class="text-sky-600">
+                <div>
+                  <p class="font-bold text-slate-800">ฟรี 0 บาท</p>
+                  <p class="text-[10px] text-slate-400 font-normal">ค่าน้ำประปาทั่วไป / ปัดเป็นรายเดือน</p>
+                </div>
+              </label>
+
+              <label class="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-sky-200 cursor-pointer">
+                <input type="radio" name="waterCostMode" value="filter" onchange="toggleWaterCostMode('filter')" class="text-sky-600">
+                <div>
+                  <p class="font-bold text-slate-800">คิดรวมค่าไส้กรอง</p>
+                  <p class="text-[10px] text-slate-400 font-normal">คำนวณต้นทุน R&D เป๊ะทุกแก้ว</p>
+                </div>
+              </label>
             </div>
-            <div>
-              <input type="text" id="ingCostPerUnitPreview" readonly value="฿0.00" class="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 font-semibold text-xs">
+
+            <!-- กล่องตั้งค่าค่าไส้กรอง (จะแสดงเมื่อเลือกคิดค่าไส้กรอง) -->
+            <div id="waterFilterCostBox" class="p-3 bg-white rounded-xl border border-sky-100 space-y-2.5 hidden">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-600 text-[10px] font-medium mb-1">ราคาชุดไส้กรอง (บาท)</label>
+                  <input type="number" step="any" id="waterFilterPriceInput" value="500" oninput="calcWaterFilterUnitCost()" class="w-full p-2 rounded-lg border border-slate-200 font-bold text-slate-800 text-xs">
+                </div>
+                <div>
+                  <label class="block text-slate-600 text-[10px] font-medium mb-1">ความจุกรองต่อรอบ (ลิตร)</label>
+                  <input type="number" step="any" id="waterFilterCapacityInput" value="2500" oninput="calcWaterFilterUnitCost()" class="w-full p-2 rounded-lg border border-slate-200 font-bold text-slate-800 text-xs">
+                </div>
+              </div>
+
+              <!-- ปุ่มเลือกชุดไส้กรองสำเร็จรูป -->
+              <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span class="text-[10px] text-sky-700 font-medium">ค่าแนะนำสำเร็จรูป:</span>
+                <button type="button" onclick="setWaterPreset(500, 2500)" class="px-2 py-0.5 bg-sky-50 border border-sky-200 hover:bg-sky-100 rounded-md text-[10px] font-semibold text-sky-800 shadow-xs">💧 ทั่วไป (500฿ / 2,500L)</button>
+                <button type="button" onclick="setWaterPreset(350, 1500)" class="px-2 py-0.5 bg-sky-50 border border-sky-200 hover:bg-sky-100 rounded-md text-[10px] font-semibold text-sky-800 shadow-xs">ประหยัด (350฿ / 1,500L)</button>
+                <button type="button" onclick="setWaterPreset(850, 3000)" class="px-2 py-0.5 bg-sky-50 border border-sky-200 hover:bg-sky-100 rounded-md text-[10px] font-semibold text-sky-800 shadow-xs">RO (850฿ / 3,000L)</button>
+              </div>
+
+              <div class="p-2.5 bg-sky-50 rounded-xl text-[11px] text-sky-900 flex justify-between items-center font-medium border border-sky-100">
+                <span>ต้นทุนตกเฉลี่ย:</span>
+                <span id="waterCostPerLiterText" class="font-bold text-sky-950">฿0.200 / ลิตร (~0.03 บ./แก้ว)</span>
+              </div>
+            </div>
+
+            <div class="p-3 bg-white/80 rounded-xl border border-sky-100 text-[11px] text-slate-600 space-y-1">
+              <div class="flex justify-between">
+                <span>หน่วยสำหรับชง:</span>
+                <span class="font-bold text-slate-800">มิลลิลิตร (ml)</span>
+              </div>
+              <div class="flex justify-between">
+                <span>สถานะสต็อก:</span>
+                <span class="font-bold text-emerald-600">♾️ พร้อมใช้ตลอดเวลา (ไม่มีวันหมด)</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1098,9 +1169,35 @@
                 <span class="font-bold text-slate-900">฿${Number(ing.CostPerUnit).toFixed(3)} / ${ing.RecipeUnit}</span>
               </div>
             </div>
+
+            ${isUnlimited ? `
+            <div class="mt-2.5 p-2 bg-sky-50/80 border border-sky-100 rounded-xl text-[10px] text-sky-800 flex items-center justify-between">
+              <span class="flex items-center gap-1 font-medium">💧 ใช้สะสม (คำนวณจากยอดขาย):</span>
+              <span class="font-bold text-sky-950">${getWaterUsageStats(ing.ID).totalLiters} ลิตร (${Number(getWaterUsageStats(ing.ID).totalMlUsed).toLocaleString()} ml)</span>
+            </div>` : ''}
           </div>
         `;
       }).join("");
+    }
+
+    function getWaterUsageStats(waterIngId) {
+      let totalMlUsed = 0;
+      if (Array.isArray(db.sales_log) && Array.isArray(db.recipe_items)) {
+        db.sales_log.forEach(sale => {
+          const items = db.recipe_items.filter(ri => ri.RecipeID === sale.RecipeID && ri.IngredientID === waterIngId);
+          items.forEach(it => {
+            totalMlUsed += (parseFloat(it.QuantityUsed) || 0) * (parseFloat(sale.QtySold) || 0);
+          });
+        });
+      }
+      const totalLiters = (totalMlUsed / 1000).toFixed(1);
+      return { totalMlUsed, totalLiters };
+    }
+
+    function setWaterPreset(price, capacity) {
+      document.getElementById("waterFilterPriceInput").value = price;
+      document.getElementById("waterFilterCapacityInput").value = capacity;
+      calcWaterFilterUnitCost();
     }
 
     function setIngredientType(type) {
@@ -1108,12 +1205,24 @@
       const btnUnl = document.getElementById("btnTypeUnlimited");
       const banner = document.getElementById("unlimitedBanner");
       const isUnlimitedHidden = document.getElementById("ingIsUnlimited");
+      const secPackaging = document.getElementById("sectionPackagingInfo");
+      const secWater = document.getElementById("sectionWaterStationInfo");
+      const purchasePrice = document.getElementById("ingPurchasePrice");
+      const purchaseQty = document.getElementById("ingPurchaseQty");
+      const currentStock = document.getElementById("ingCurrentStock");
 
       if (type === "unlimited") {
         isUnlimitedHidden.value = "true";
         btnUnl.className = "py-1.5 rounded-lg bg-sky-600 text-white shadow-sm font-bold";
         btnStd.className = "py-1.5 rounded-lg text-slate-500 hover:text-slate-900";
         banner.classList.remove("hidden");
+        secPackaging.classList.add("hidden");
+        secWater.classList.remove("hidden");
+
+        // ปลดล็อค required ชั่วคราวเพื่อไม่ให้ติด validation ของช่องที่ซ่อนไว้
+        purchasePrice.removeAttribute("required");
+        purchaseQty.removeAttribute("required");
+        currentStock.removeAttribute("required");
 
         const nameInput = document.getElementById("ingName");
         if (!nameInput.value || nameInput.value.trim() === "" || nameInput.value === "ผงชาไทยพรีเมียม") {
@@ -1121,24 +1230,63 @@
         }
         document.getElementById("ingEmoji").value = "💧";
         updateEmojiPreview("ing");
-        document.getElementById("ingPurchasePrice").value = "0";
-        document.getElementById("ingPurchaseUnit").value = "ก๊อกกรอง (ไม่จำกัด)";
-        document.getElementById("ingPurchaseQty").value = "1000";
-        document.getElementById("ingRecipeUnit").value = "มล.";
-        document.getElementById("ingCurrentStock").value = "-1";
+        toggleWaterCostMode("free");
       } else {
         isUnlimitedHidden.value = "false";
         btnStd.className = "py-1.5 rounded-lg bg-white shadow-sm text-slate-900 font-bold";
         btnUnl.className = "py-1.5 rounded-lg text-slate-500 hover:text-slate-900";
         banner.classList.add("hidden");
+        secPackaging.classList.remove("hidden");
+        secWater.classList.add("hidden");
+
+        purchasePrice.setAttribute("required", "required");
+        purchaseQty.setAttribute("required", "required");
+        currentStock.setAttribute("required", "required");
 
         if (document.getElementById("ingCurrentStock").value === "-1") {
           document.getElementById("ingCurrentStock").value = "1000";
         }
-        if (document.getElementById("ingPurchaseUnit").value === "ก๊อกกรอง (ไม่จำกัด)") {
+        if (document.getElementById("ingPurchaseUnit").value.includes("ก๊อกกรอง")) {
           document.getElementById("ingPurchaseUnit").value = "ถุง";
         }
       }
+      calcUnitCostPreview();
+    }
+
+    function toggleWaterCostMode(mode) {
+      const box = document.getElementById("waterFilterCostBox");
+      const purchasePrice = document.getElementById("ingPurchasePrice");
+      const purchaseQty = document.getElementById("ingPurchaseQty");
+      const purchaseUnit = document.getElementById("ingPurchaseUnit");
+      const recipeUnit = document.getElementById("ingRecipeUnit");
+      const currentStock = document.getElementById("ingCurrentStock");
+
+      recipeUnit.value = "มล.";
+      currentStock.value = "-1";
+
+      if (mode === "filter") {
+        box.classList.remove("hidden");
+        calcWaterFilterUnitCost();
+      } else {
+        box.classList.add("hidden");
+        purchasePrice.value = "0";
+        purchaseQty.value = "1000";
+        purchaseUnit.value = "ก๊อกกรอง (ไม่จำกัด)";
+        calcUnitCostPreview();
+      }
+    }
+
+    function calcWaterFilterUnitCost() {
+      const filterPrice = parseFloat(document.getElementById("waterFilterPriceInput").value) || 0;
+      const filterCapacityLiters = parseFloat(document.getElementById("waterFilterCapacityInput").value) || 2500;
+      const costPerLiter = filterCapacityLiters > 0 ? (filterPrice / filterCapacityLiters) : 0;
+      const costPerCup150ml = (costPerLiter / 1000) * 150;
+
+      document.getElementById("waterCostPerLiterText").innerText = `฿${costPerLiter.toFixed(3)} / ลิตร (~${costPerCup150ml.toFixed(2)} บ./แก้ว 150ml)`;
+
+      document.getElementById("ingPurchasePrice").value = filterPrice;
+      document.getElementById("ingPurchaseQty").value = filterCapacityLiters * 1000;
+      document.getElementById("ingPurchaseUnit").value = `ก๊อกกรอง (ไส้กรอง ${filterCapacityLiters.toLocaleString()}L)`;
       calcUnitCostPreview();
     }
 
@@ -1164,6 +1312,20 @@
 
           const isUnl = Number(ing.CurrentStock) === -1 || String(ing.PurchaseUnit).includes("ไม่จำกัด") || String(ing.PurchaseUnit).includes("ก๊อก");
           setIngredientType(isUnl ? "unlimited" : "standard");
+
+          if (isUnl) {
+            const hasFilterCost = Number(ing.PurchasePrice) > 0;
+            const rads = document.getElementsByName("waterCostMode");
+            rads.forEach(r => {
+              r.checked = (r.value === (hasFilterCost ? "filter" : "free"));
+            });
+            toggleWaterCostMode(hasFilterCost ? "filter" : "free");
+            if (hasFilterCost) {
+              document.getElementById("waterFilterPriceInput").value = ing.PurchasePrice;
+              document.getElementById("waterFilterCapacityInput").value = (Number(ing.PurchaseQty) / 1000) || 2500;
+              calcWaterFilterUnitCost();
+            }
+          }
 
           const imgData = ing.Image || ing.image || "";
           if (imgData && (String(imgData).startsWith("data:image") || String(imgData).startsWith("http"))) {
