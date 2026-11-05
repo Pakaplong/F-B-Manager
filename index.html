@@ -1772,29 +1772,50 @@
     function addRecipeItemRow(ingId = "", qtyBase = 0) {
       const container = document.getElementById("recipeItemsContainer");
       const rowDiv = document.createElement("div");
-      rowDiv.className = "recipe-item-row flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200";
+      rowDiv.className = "recipe-item-row bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5 shadow-2xs transition";
 
       const ingOptions = db.ingredients.map(ing => 
         `<option value="${ing.ID}" ${ing.ID === ingId ? 'selected' : ''}>${ing.Emoji || '📦'} ${ing.Name} (${ing.RecipeUnit})</option>`
       ).join("");
 
       rowDiv.innerHTML = `
-        <select class="ing-select flex-1 p-1.5 rounded border border-slate-200 text-xs bg-white" onchange="calcRecipeCostTotal()">
-          <option value="">-- เลือกวัตถุดิบ --</option>
-          ${ingOptions}
-        </select>
-        <input type="number" step="any" class="qty-input w-20 p-1.5 rounded border border-slate-200 text-xs font-semibold" value="${qtyBase || ''}" placeholder="ปริมาณ" oninput="calcRecipeCostTotal()">
-        <select class="unit-select w-28 p-1.5 rounded border border-slate-200 text-xs bg-slate-50" onchange="handleUnitConverterChange(this)">
-          <option value="g_ml">กรัม / มล.</option>
-          <option value="tbsp">ช้อนโต๊ะ (15)</option>
-          <option value="tsp">ช้อนชา (5)</option>
-          <option value="oz">ออนซ์ (30)</option>
-        </select>
-        <button type="button" onclick="this.closest('.recipe-item-row').remove(); calcRecipeCostTotal();" class="text-rose-500 hover:text-rose-700 px-1 font-bold text-base">✕</button>
+        <div class="flex items-center gap-2">
+          <select class="ing-select flex-1 p-2 rounded-lg border border-slate-200 text-xs bg-white focus:ring-1 focus:ring-slate-900 outline-none" onchange="calcRecipeCostTotal(); updateRecipeRowHint(this.closest('.recipe-item-row'));">
+            <option value="">-- เลือกวัตถุดิบ --</option>
+            ${ingOptions}
+          </select>
+          <input type="number" step="any" class="qty-input w-20 p-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-800" value="${qtyBase || ''}" placeholder="ปริมาณ" oninput="onQtyInputChange(this)">
+          <select class="unit-select w-28 p-2 rounded-lg border border-slate-200 text-xs bg-slate-50 font-medium" onchange="handleUnitConverterChange(this)">
+            <option value="g_ml">กรัม / มล.</option>
+            <option value="tbsp">ช้อนโต๊ะ (15)</option>
+            <option value="tsp">ช้อนชา (5)</option>
+            <option value="oz">ออนซ์ (30)</option>
+          </select>
+          <button type="button" onclick="this.closest('.recipe-item-row').remove(); calcRecipeCostTotal();" class="text-slate-300 hover:text-rose-500 px-1 font-bold text-base transition">✕</button>
+        </div>
+        <div class="row-hint-box text-[10px] text-slate-500 px-1 flex items-center justify-between hidden">
+          <span class="row-hint-text font-medium flex items-center gap-1"></span>
+          <span class="row-cost-text font-bold text-slate-700"></span>
+        </div>
       `;
 
       container.appendChild(rowDiv);
       calcRecipeCostTotal();
+      updateRecipeRowHint(rowDiv);
+    }
+
+    function onQtyInputChange(inputElem) {
+      const row = inputElem.closest(".recipe-item-row");
+      if (row.dataset.originalVal && row.dataset.multiplier) {
+        const expected = parseFloat(row.dataset.originalVal) * parseFloat(row.dataset.multiplier);
+        if (Math.abs(expected - (parseFloat(inputElem.value) || 0)) > 0.01) {
+          delete row.dataset.originalVal;
+          delete row.dataset.originalUnit;
+          delete row.dataset.multiplier;
+        }
+      }
+      calcRecipeCostTotal();
+      updateRecipeRowHint(row);
     }
 
     function handleUnitConverterChange(selectElem) {
@@ -1803,14 +1824,99 @@
       const currentVal = parseFloat(qtyInput.value) || 0;
       const unit = selectElem.value;
 
+      const UNIT_LABELS = {
+        tbsp: "ช้อนโต๊ะ",
+        tsp: "ช้อนชา",
+        oz: "ออนซ์"
+      };
+
       if (unit !== "g_ml" && currentVal > 0) {
         const multiplier = UNIT_MULTIPLIERS[unit] || 1;
         const converted = currentVal * multiplier;
+        
+        row.dataset.originalVal = currentVal;
+        row.dataset.originalUnit = UNIT_LABELS[unit] || unit;
+        row.dataset.multiplier = multiplier;
+
         qtyInput.value = converted;
         selectElem.value = "g_ml";
-        showToast(`แปลงหน่วย: ${currentVal} ${unit} = ${converted} กรัม/มล.`, "info");
+        showToast(`แปลงหน่วย: ${currentVal} ${UNIT_LABELS[unit]} = ${converted} กรัม/มล.`, "info");
       }
       calcRecipeCostTotal();
+      updateRecipeRowHint(row);
+    }
+
+    function updateRecipeRowHint(row) {
+      if (!row) return;
+      const ingSelect = row.querySelector(".ing-select");
+      const qtyInput = row.querySelector(".qty-input");
+      const hintBox = row.querySelector(".row-hint-box");
+      const hintText = row.querySelector(".row-hint-text");
+      const costText = row.querySelector(".row-cost-text");
+
+      if (!hintBox || !hintText || !costText) return;
+
+      const qty = parseFloat(qtyInput.value) || 0;
+      const ingId = ingSelect.value;
+      const ing = db.ingredients.find(i => i.ID === ingId);
+      const recipeUnit = ing ? ing.RecipeUnit : "กรัม/มล.";
+
+      let rowCost = 0;
+      if (ing && qty > 0) {
+        rowCost = qty * (parseFloat(ing.CostPerUnit) || 0);
+        costText.innerText = `ต้นทุน: ฿${rowCost.toFixed(2)}`;
+      } else {
+        costText.innerText = "";
+      }
+
+      // 1. กรณีแปลงอัตโนมัติจาก ช้อนโต๊ะ/ช้อนชา/ออนซ์
+      if (row.dataset.originalVal && row.dataset.originalUnit) {
+        hintText.innerHTML = `
+          <span class="inline-flex items-center gap-1 text-blue-700 bg-blue-50 border border-blue-200/70 px-2 py-0.5 rounded-md font-semibold">
+            <span>✨ แปลงอัตโนมัติจาก:</span>
+            <span class="underline underline-offset-2">${row.dataset.originalVal} ${row.dataset.originalUnit}</span>
+            <span class="text-blue-500 font-normal">(${row.dataset.originalVal} × ${row.dataset.multiplier} = ${qty} ${recipeUnit})</span>
+          </span>
+        `;
+        hintBox.classList.remove("hidden");
+        return;
+      }
+
+      // 2. กรณีผู้ใช้พิมพ์ตัวเลขตรงๆ (เช่น 180 กรัม, 30 ml)
+      if (qty >= 5) {
+        let equivalents = [];
+        if (qty >= 15 && qty % 15 === 0) {
+          equivalents.push(`${qty / 15} ช้อนโต๊ะ`);
+        } else if (qty >= 15 && (qty % 15 <= 2 || qty % 15 >= 13)) {
+          equivalents.push(`≈ ${(qty / 15).toFixed(1)} ช้อนโต๊ะ`);
+        }
+
+        if (qty >= 30 && qty % 30 === 0) {
+          equivalents.push(`${qty / 30} ออนซ์ (oz)`);
+        } else if (qty >= 30 && (qty % 30 <= 3 || qty % 30 >= 27)) {
+          equivalents.push(`≈ ${(qty / 30).toFixed(1)} oz`);
+        } else if (qty < 15 && qty % 5 === 0) {
+          equivalents.push(`${qty / 5} ช้อนชา`);
+        }
+
+        if (equivalents.length > 0) {
+          hintText.innerHTML = `
+            <span class="text-slate-400 font-normal flex items-center gap-1">
+              <span>💡 เทียบเท่า:</span>
+              <strong class="text-slate-700 font-semibold">${equivalents.join(" หรือ ")}</strong>
+            </span>
+          `;
+          hintBox.classList.remove("hidden");
+          return;
+        }
+      }
+
+      if (rowCost > 0) {
+        hintText.innerHTML = "";
+        hintBox.classList.remove("hidden");
+      } else {
+        hintBox.classList.add("hidden");
+      }
     }
 
     function calcRecipeCostTotal() {
