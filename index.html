@@ -649,8 +649,9 @@
 
     // Helper แสดงผล Avatar (รูปภาพ หรือ Fallback เป็น Emoji)
     function renderVisualThumb(image, emoji, sizeClass = "w-12 h-12") {
-      if (image && String(image).startsWith("data:image")) {
-        return `<img src="${image}" class="${sizeClass} object-cover rounded-xl shadow-sm border border-slate-100" onerror="this.outerHTML='<span class=\\'text-2xl\\'>${emoji || '🧋'}</span>'">`;
+      const imgStr = (image && typeof image === "string") ? image.trim() : "";
+      if (imgStr.startsWith("data:image") || imgStr.startsWith("http")) {
+        return `<img src="${imgStr}" class="${sizeClass} object-cover rounded-xl shadow-sm border border-slate-100" alt="thumb">`;
       }
       return `<span class="text-3xl">${emoji || '🧋'}</span>`;
     }
@@ -718,7 +719,7 @@
 
       posGrid.innerHTML = activeRecipes.map(recipe => {
         const cost = calculateRecipeCost(recipe.ID);
-        const thumbHtml = renderVisualThumb(recipe.Image, recipe.Emoji, "w-14 h-14");
+        const thumbHtml = renderVisualThumb(recipe.Image || recipe.image, recipe.Emoji || recipe.emoji, "w-14 h-14");
 
         return `
           <div onclick="addToCart('${recipe.ID}')" class="bg-white rounded-2xl border border-slate-200 p-4 hover:border-slate-400 hover:shadow-md active:scale-95 transition cursor-pointer flex flex-col justify-between">
@@ -898,7 +899,7 @@
 
       container.innerHTML = db.ingredients.map(ing => {
         const isLow = Number(ing.CurrentStock) < 200;
-        const thumb = renderVisualThumb(ing.Image, ing.Emoji, "w-12 h-12");
+        const thumb = renderVisualThumb(ing.Image || ing.image, ing.Emoji || ing.emoji, "w-12 h-12");
 
         return `
           <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
@@ -967,12 +968,15 @@
           document.getElementById("ingRecipeUnit").value = ing.RecipeUnit;
           document.getElementById("ingCurrentStock").value = ing.CurrentStock;
 
-          if (ing.Image && String(ing.Image).startsWith("data:image")) {
-            document.getElementById("ingImageBase64").value = ing.Image;
-            document.getElementById("ingImagePreview").src = ing.Image;
+          const imgData = ing.Image || ing.image || "";
+          if (imgData && (String(imgData).startsWith("data:image") || String(imgData).startsWith("http"))) {
+            document.getElementById("ingImageBase64").value = imgData;
+            document.getElementById("ingImagePreview").src = imgData;
             document.getElementById("ingImagePreview").classList.remove("hidden");
             document.getElementById("ingEmojiPreview").classList.add("hidden");
             document.getElementById("btnRemoveIngImg").classList.remove("hidden");
+          } else {
+            removeImage("ing");
           }
         }
       } else {
@@ -1127,7 +1131,7 @@
         const price = parseFloat(recipe.SellingPrice) || 0;
         const profit = price - cost;
         const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
-        const thumb = renderVisualThumb(recipe.Image, recipe.Emoji, "w-14 h-14");
+        const thumb = renderVisualThumb(recipe.Image || recipe.image, recipe.Emoji || recipe.emoji, "w-14 h-14");
 
         let statusBadge = "";
         if (recipe.Status === "Active") {
@@ -1210,12 +1214,15 @@
           document.getElementById("recipeSellingPrice").value = r.SellingPrice;
           document.getElementById("recipeStatus").value = r.Status;
 
-          if (r.Image && String(r.Image).startsWith("data:image")) {
-            document.getElementById("recipeImageBase64").value = r.Image;
-            document.getElementById("recipeImagePreview").src = r.Image;
+          const imgData = r.Image || r.image || "";
+          if (imgData && (String(imgData).startsWith("data:image") || String(imgData).startsWith("http"))) {
+            document.getElementById("recipeImageBase64").value = imgData;
+            document.getElementById("recipeImagePreview").src = imgData;
             document.getElementById("recipeImagePreview").classList.remove("hidden");
             document.getElementById("recipeEmojiPreview").classList.add("hidden");
             document.getElementById("btnRemoveRecipeImg").classList.remove("hidden");
+          } else {
+            removeImage("recipe");
           }
 
           const items = db.recipe_items.filter(ri => ri.RecipeID === recipeId);

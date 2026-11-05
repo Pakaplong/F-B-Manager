@@ -241,8 +241,16 @@ function handleSaveIngredient(ss, data) {
   const sheet = ss.getSheetByName("Ingredients");
   if (!sheet) throw new Error("ไม่พบชีท Ingredients");
 
+  // ตรวจสอบและซ่อมแซมหัวตารางแถวที่ 1 ให้มีคอลัมน์ Image อัตโนมัติ
+  const curHeaders = sheet.getRange(1, 1, 1, 10).getValues()[0];
+  if (curHeaders[9] !== "Image") {
+    sheet.getRange(1, 1, 1, SHEET_CONFIG.Ingredients.length).setValues([SHEET_CONFIG.Ingredients]);
+    const headerRange = sheet.getRange(1, 1, 1, SHEET_CONFIG.Ingredients.length);
+    headerRange.setBackground("#1e293b").setFontColor("#ffffff").setFontWeight("bold");
+  }
+
   const rows = sheet.getDataRange().getValues();
-  const headers = rows[0];
+  const headers = rows[0].map(h => String(h).trim());
   const idIdx = headers.indexOf("ID");
 
   const id = data.id || ("ING_" + Utilities.getUuid().substring(0, 5).toUpperCase());
@@ -254,7 +262,7 @@ function handleSaveIngredient(ss, data) {
   const recipeUnit = data.recipeUnit || "กรัม";
   const costPerUnit = parseFloat(data.costPerUnit) || (purchasePrice / purchaseQty);
   const currentStock = parseFloat(data.currentStock) || 0;
-  const image = data.image || "";
+  const image = data.image || data.Image || "";
 
   let existingRow = -1;
   for (let i = 1; i < rows.length; i++) {
@@ -401,6 +409,22 @@ function clearAllSheetData(ss) {
 function getSheetData(ss, sheetName, limit) {
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return [];
+
+  // ตรวจสอบและซ่อมแซมหัวตารางให้อัตโนมัติ (เช่น คอลัมน์ Image ที่เพิ่งเพิ่มเข้ามา)
+  const expectedHeaders = SHEET_CONFIG[sheetName];
+  if (expectedHeaders && sheet.getLastRow() >= 1) {
+    const curHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+    let needFix = false;
+    expectedHeaders.forEach((expected, i) => {
+      if (!curHeaders[i] || String(curHeaders[i]).trim() !== expected) {
+        needFix = true;
+      }
+    });
+    if (needFix) {
+      sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+    }
+  }
+
   const rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
 
@@ -414,8 +438,13 @@ function getSheetData(ss, sheetName, limit) {
   return dataRows.map(row => {
     const obj = {};
     headers.forEach((header, i) => {
-      obj[header] = row[i];
+      if (header) {
+        obj[header] = row[i];
+      }
     });
+    // รองรับทั้ง Image (I ใหญ่) และ image (i เล็ก) เพื่อไม่ให้บั๊ก
+    if (obj["Image"]) obj["image"] = obj["Image"];
+    else if (obj["image"]) obj["Image"] = obj["image"];
     return obj;
   });
 }
