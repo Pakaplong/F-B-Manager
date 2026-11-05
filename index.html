@@ -391,14 +391,24 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">สต็อกคงเหลือปัจจุบัน (หน่วยย่อย)</label>
-            <input type="number" step="any" id="ingCurrentStock" required placeholder="เช่น 1000" class="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none">
+        <div class="p-3 bg-slate-50 rounded-xl space-y-2 border border-slate-100">
+          <div class="flex justify-between items-center">
+            <label class="font-semibold text-slate-700 text-[11px]">สต็อกคงเหลือปัจจุบัน (หน่วยย่อย)</label>
+            <div class="flex items-center gap-1.5 text-[11px]">
+              <span class="text-slate-500">มีกี่แพ็ก/ถุง?</span>
+              <input type="number" id="ingBagsHelper" value="1" min="1" class="w-12 p-1 text-center border border-slate-200 rounded bg-white font-bold" oninput="applyBagsToStock()">
+              <button type="button" onclick="applyBagsToStock()" class="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 font-bold text-[10px]">
+                คำนวณ
+              </button>
+            </div>
           </div>
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">ต้นทุนต่อหน่วยย่อย (คำนวณให้อัตโนมัติ)</label>
-            <input type="text" id="ingCostPerUnitPreview" readonly value="฿0.00" class="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 font-semibold">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <input type="number" step="any" id="ingCurrentStock" required placeholder="เช่น 180" class="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm font-bold bg-white">
+            </div>
+            <div>
+              <input type="text" id="ingCostPerUnitPreview" readonly value="฿0.00" class="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 font-semibold text-xs">
+            </div>
           </div>
         </div>
 
@@ -503,21 +513,63 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: ปรับสต็อกด่วน ================= -->
+  <!-- ================= MODAL: ปรับสต็อกด่วน & เติมของ ================= -->
   <div id="modalAdjustStock" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl">
-      <h3 class="font-bold text-slate-900 text-sm mb-1" id="stockAdjTitle">ปรับยอดสต็อก</h3>
-      <p class="text-xs text-slate-500 mb-4" id="stockAdjSubtitle"></p>
+      <h3 class="font-bold text-slate-900 text-sm mb-1" id="stockAdjTitle">เติมของ / ปรับยอดสต็อก</h3>
+      <p class="text-xs text-slate-500 mb-3" id="stockAdjSubtitle"></p>
       <input type="hidden" id="stockAdjId">
+      <input type="hidden" id="stockAdjPackQty" value="1000">
+      <input type="hidden" id="stockAdjCurrentBase" value="0">
       
-      <div class="mb-4">
-        <label class="block text-xs font-semibold text-slate-700 mb-1">ยอดสต็อกคงเหลือใหม่</label>
-        <input type="number" step="any" id="stockAdjInput" class="w-full p-2.5 rounded-xl border border-slate-200 text-base font-bold focus:ring-2 focus:ring-slate-900 outline-none">
+      <!-- โหมดการเติมของ / ปรับยอด -->
+      <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl mb-3 text-xs font-semibold">
+        <button type="button" id="btnModeAddPacks" onclick="switchStockAdjMode('add')" class="py-1.5 rounded-lg bg-white shadow-sm text-slate-900">
+          📦 เติมของเพิ่ม
+        </button>
+        <button type="button" id="btnModeSetManual" onclick="switchStockAdjMode('set')" class="py-1.5 rounded-lg text-slate-500">
+          ✏️ กำหนดยอดเอง
+        </button>
       </div>
 
-      <div class="flex justify-end gap-2">
+      <!-- ส่วนที่ 1: เติมของเพิ่ม (หลายถุง/แพ็ก) -->
+      <div id="panelAddPacks" class="space-y-3 mb-4">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-700 mb-1" id="lblAddPacks">ซื้อมาเพิ่มกี่แพ็ก/ถุง?</label>
+          <div class="flex items-center gap-2">
+            <input type="number" step="any" id="stockAddPackCount" oninput="calcStockAddition()" value="1" min="0" class="w-24 p-2 rounded-xl border border-slate-200 text-sm font-bold text-center">
+            <span class="text-xs text-slate-600 font-medium" id="stockAdjUnitText">ถุง</span>
+            <div class="flex gap-1">
+              <button type="button" onclick="setAddPacks(1)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-[11px] font-bold">+1</button>
+              <button type="button" onclick="setAddPacks(2)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-[11px] font-bold">+2</button>
+              <button type="button" onclick="setAddPacks(5)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-[11px] font-bold">+5</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-2.5 bg-emerald-50 text-emerald-900 rounded-xl text-xs space-y-1">
+          <div class="flex justify-between">
+            <span>เพิ่มเข้าสต็อก:</span>
+            <span id="stockAddedAmountText" class="font-bold">+180 กรัม</span>
+          </div>
+          <div class="flex justify-between font-bold pt-1 border-t border-emerald-100">
+            <span>สต็อกสุทธิใหม่:</span>
+            <span id="stockNewTotalText">360 กรัม</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ส่วนที่ 2: กำหนดยอดคงเหลือโดยตรง (นับสต็อกจริง) -->
+      <div id="panelSetManual" class="space-y-3 mb-4 hidden">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-700 mb-1">ยอดสต็อกคงเหลือสุทธิ (หน่วยย่อย)</label>
+          <input type="number" step="any" id="stockAdjInput" class="w-full p-2.5 rounded-xl border border-slate-200 text-base font-bold focus:ring-2 focus:ring-slate-900 outline-none">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
         <button type="button" onclick="closeModal('modalAdjustStock')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-medium">ยกเลิก</button>
-        <button type="button" onclick="confirmAdjustStock()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">บันทึก</button>
+        <button type="button" onclick="confirmAdjustStock()" class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">ยืนยันบันทึก</button>
       </div>
     </div>
   </div>
@@ -676,6 +728,13 @@
         const json = await res.json();
         if (json.success && json.data) {
           db = json.data;
+          // กรองแถวว่างเปล่าทิ้ง ป้องกัน Ghost row จาก Google Sheets
+          if (Array.isArray(db.ingredients)) {
+            db.ingredients = db.ingredients.filter(i => (i.Name && String(i.Name).trim()) || (i.PurchasePrice && Number(i.PurchasePrice) > 0));
+          }
+          if (Array.isArray(db.recipes)) {
+            db.recipes = db.recipes.filter(r => (r.Name && String(r.Name).trim()));
+          }
           badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>เชื่อมต่อ Google Sheets แล้ว`;
           showToast("เชื่อมต่อข้อมูลสำเร็จ", "success");
         } else {
@@ -719,17 +778,25 @@
 
       posGrid.innerHTML = activeRecipes.map(recipe => {
         const cost = calculateRecipeCost(recipe.ID);
-        const thumbHtml = renderVisualThumb(recipe.Image || recipe.image, recipe.Emoji || recipe.emoji, "w-14 h-14");
+        const recipeItems = db.recipe_items.filter(ri => ri.RecipeID === recipe.ID);
+        // เช็กว่าวัตถุดิบในสูตรนี้มีตัวไหนหมดสต็อกหรือไม่
+        const isOutOfStock = recipeItems.some(ri => {
+          const ing = db.ingredients.find(i => i.ID === ri.IngredientID);
+          return ing && (Number(ing.CurrentStock) <= 0 || Number(ing.CurrentStock) < Number(ri.QuantityUsed));
+        });
+
+        const thumbHtml = renderVisualThumb(recipe.Image || recipe.image, recipe.Emoji || recipe.emoji, `w-14 h-14 ${isOutOfStock ? 'grayscale opacity-50' : ''}`);
 
         return `
-          <div onclick="addToCart('${recipe.ID}')" class="bg-white rounded-2xl border border-slate-200 p-4 hover:border-slate-400 hover:shadow-md active:scale-95 transition cursor-pointer flex flex-col justify-between">
+          <div onclick="${isOutOfStock ? `showToast('เมนูนี้ของหมดชั่วคราว: วัตถุดิบในสต็อกไม่พอ', 'error')` : `addToCart('${recipe.ID}')`}" class="relative bg-white rounded-2xl border ${isOutOfStock ? 'border-rose-100 bg-slate-50/70 opacity-75' : 'border-slate-200 hover:border-slate-400 hover:shadow-md active:scale-95'} p-4 transition cursor-pointer flex flex-col justify-between">
+            ${isOutOfStock ? `<span class="absolute top-3 right-3 bg-rose-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">วัตถุดิบหมด</span>` : ''}
             <div>
               <div class="mb-3">${thumbHtml}</div>
               <h4 class="font-bold text-slate-900 text-sm leading-tight">${recipe.Name}</h4>
             </div>
             <div class="mt-4 pt-2 border-t border-slate-100 flex items-baseline justify-between">
               <span class="text-[11px] text-slate-400 font-normal">ทุน ~฿${cost.toFixed(1)}</span>
-              <span class="text-base font-black text-slate-900">฿${recipe.SellingPrice}</span>
+              <span class="text-base font-black ${isOutOfStock ? 'text-slate-400 line-through' : 'text-slate-900'}">฿${recipe.SellingPrice}</span>
             </div>
           </div>
         `;
@@ -898,38 +965,62 @@
       }
 
       container.innerHTML = db.ingredients.map(ing => {
-        const isLow = Number(ing.CurrentStock) < 200;
-        const thumb = renderVisualThumb(ing.Image || ing.image, ing.Emoji || ing.emoji, "w-12 h-12");
+        const stock = Number(ing.CurrentStock) || 0;
+        const packQty = Number(ing.PurchaseQty) || 1000;
+        const isOutOfStock = stock <= 0;
+        const isLow = !isOutOfStock && stock <= Math.max(50, packQty * 0.25);
+        const thumb = renderVisualThumb(ing.Image || ing.image, ing.Emoji || ing.emoji, `w-12 h-12 ${isOutOfStock ? 'grayscale opacity-60' : ''}`);
+
+        let cardStyle = "bg-white border-slate-200";
+        let badgeStyle = "bg-slate-50 border-slate-100 text-slate-900";
+        let badgeNotice = "";
+
+        if (isOutOfStock) {
+          cardStyle = "bg-slate-50/80 border-rose-200 opacity-90";
+          badgeStyle = "bg-rose-50 border-rose-200 text-rose-700";
+          badgeNotice = '<p class="text-[10px] text-rose-600 mt-1 font-bold flex items-center gap-1"><span>🚨</span> ของหมดสต็อก (ต้องซื้อเพิ่ม)</p>';
+        } else if (isLow) {
+          badgeStyle = "bg-amber-50 border-amber-200 text-amber-700";
+          badgeNotice = '<p class="text-[10px] text-amber-600 mt-1 font-medium flex items-center gap-1"><span>⚠️</span> สต็อกใกล้หมดแล้ว</p>';
+        }
+
+        const safeName = (ing.Name || "").replace(/'/g, "\\'");
 
         return `
-          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+          <div class="rounded-2xl border ${cardStyle} p-4 shadow-sm flex flex-col justify-between transition">
             <div>
               <div class="flex items-start justify-between">
                 <div class="flex items-center gap-2.5">
                   <div class="shrink-0">${thumb}</div>
                   <div>
-                    <h4 class="font-bold text-slate-900 text-sm">${ing.Name}</h4>
+                    <div class="flex items-center gap-1.5">
+                      <h4 class="font-bold text-slate-900 text-sm">${ing.Name}</h4>
+                      ${isOutOfStock ? '<span class="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded font-bold">หมด</span>' : ''}
+                    </div>
                     <span class="text-[10px] text-slate-400 font-mono">${ing.ID}</span>
                   </div>
                 </div>
                 <div class="flex items-center gap-1">
-                  <button onclick="openIngredientModal('${ing.ID}')" class="text-xs text-slate-500 hover:text-slate-800 p-1 rounded-lg">
+                  <button onclick="openIngredientModal('${ing.ID}')" title="แก้ไข" class="text-xs text-slate-500 hover:text-slate-800 p-1.5 rounded-lg hover:bg-slate-100">
                     ✏️
                   </button>
-                  <button onclick="openAdjustStockModal('${ing.ID}')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-medium">
-                    ปรับยอด
+                  <button onclick="openAdjustStockModal('${ing.ID}')" class="text-xs ${isOutOfStock ? 'bg-rose-600 hover:bg-rose-700' : 'bg-slate-900 hover:bg-slate-800'} text-white px-2.5 py-1 rounded-lg font-medium shadow-sm">
+                    + เติมของ
+                  </button>
+                  <button onclick="deleteIngredientConfirm('${ing.ID}', '${safeName}')" title="ลบวัตถุดิบถาวร" class="text-xs text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 font-bold ml-0.5">
+                    ✕
                   </button>
                 </div>
               </div>
 
-              <div class="mt-4 p-3 rounded-xl ${isLow ? 'bg-rose-50 border border-rose-200' : 'bg-slate-50 border border-slate-100'}">
+              <div class="mt-4 p-3 rounded-xl border ${badgeStyle}">
                 <div class="flex justify-between items-baseline">
-                  <span class="text-xs ${isLow ? 'text-rose-600 font-semibold' : 'text-slate-500'}">สต็อกคงเหลือ</span>
-                  <span class="text-lg font-black ${isLow ? 'text-rose-600' : 'text-slate-900'}">
+                  <span class="text-xs ${isOutOfStock ? 'text-rose-600' : (isLow ? 'text-amber-700' : 'text-slate-500')} font-medium">สต็อกคงเหลือ</span>
+                  <span class="text-lg font-black ${isOutOfStock ? 'text-rose-600' : 'text-slate-900'}">
                     ${Number(ing.CurrentStock).toLocaleString()} <span class="text-xs font-normal text-slate-500">${ing.RecipeUnit}</span>
                   </span>
                 </div>
-                ${isLow ? '<p class="text-[10px] text-rose-500 mt-1 font-medium">⚠️ สต็อกใกล้หมดแล้ว</p>' : ''}
+                ${badgeNotice}
               </div>
             </div>
 
@@ -991,6 +1082,13 @@
       modal.classList.remove("hidden");
     }
 
+    function applyBagsToStock() {
+      const bags = parseFloat(document.getElementById("ingBagsHelper").value) || 1;
+      const qtyPerBag = parseFloat(document.getElementById("ingPurchaseQty").value) || 0;
+      const total = bags * qtyPerBag;
+      document.getElementById("ingCurrentStock").value = total;
+    }
+
     function calcUnitCostPreview() {
       const price = parseFloat(document.getElementById("ingPurchasePrice").value) || 0;
       const qty = parseFloat(document.getElementById("ingPurchaseQty").value) || 1;
@@ -1038,19 +1136,80 @@
       }
     }
 
+    let currentStockAdjMode = "add";
+
+    function switchStockAdjMode(mode) {
+      currentStockAdjMode = mode;
+      const btnAdd = document.getElementById("btnModeAddPacks");
+      const btnSet = document.getElementById("btnModeSetManual");
+      const panelAdd = document.getElementById("panelAddPacks");
+      const panelSet = document.getElementById("panelSetManual");
+
+      if (mode === "add") {
+        btnAdd.className = "py-1.5 rounded-lg bg-white shadow-sm text-slate-900";
+        btnSet.className = "py-1.5 rounded-lg text-slate-500";
+        panelAdd.classList.remove("hidden");
+        panelSet.classList.add("hidden");
+      } else {
+        btnSet.className = "py-1.5 rounded-lg bg-white shadow-sm text-slate-900";
+        btnAdd.className = "py-1.5 rounded-lg text-slate-500";
+        panelSet.classList.remove("hidden");
+        panelAdd.classList.add("hidden");
+      }
+    }
+
+    function setAddPacks(n) {
+      document.getElementById("stockAddPackCount").value = n;
+      calcStockAddition();
+    }
+
+    function calcStockAddition() {
+      const packs = parseFloat(document.getElementById("stockAddPackCount").value) || 0;
+      const packQty = parseFloat(document.getElementById("stockAdjPackQty").value) || 1000;
+      const current = parseFloat(document.getElementById("stockAdjCurrentBase").value) || 0;
+      const unit = document.getElementById("stockAdjUnitText").innerText;
+
+      const added = packs * packQty;
+      const newTotal = current + added;
+
+      document.getElementById("stockAddedAmountText").innerText = `+${added.toLocaleString()} (จาก ${packs} ${unit})`;
+      document.getElementById("stockNewTotalText").innerText = `${newTotal.toLocaleString()}`;
+      document.getElementById("stockAdjInput").value = newTotal;
+    }
+
     function openAdjustStockModal(id) {
       const ing = db.ingredients.find(i => i.ID === id);
       if (!ing) return;
       document.getElementById("stockAdjId").value = ing.ID;
-      document.getElementById("stockAdjTitle").innerText = `${ing.Emoji || '📦'} ปรับสต็อก: ${ing.Name}`;
-      document.getElementById("stockAdjSubtitle").innerText = `สต็อกเดิม: ${ing.CurrentStock} ${ing.RecipeUnit}`;
-      document.getElementById("stockAdjInput").value = ing.CurrentStock;
+      document.getElementById("stockAdjTitle").innerText = `${ing.Emoji || '📦'} เติมของ / ปรับ: ${ing.Name}`;
+      document.getElementById("stockAdjSubtitle").innerText = `สต็อกปัจจุบัน: ${ing.CurrentStock} ${ing.RecipeUnit} (1 ${ing.PurchaseUnit} = ${ing.PurchaseQty} ${ing.RecipeUnit})`;
+      
+      const currentStock = parseFloat(ing.CurrentStock) || 0;
+      const packQty = parseFloat(ing.PurchaseQty) || 1000;
+      document.getElementById("stockAdjCurrentBase").value = currentStock;
+      document.getElementById("stockAdjPackQty").value = packQty;
+      document.getElementById("stockAdjUnitText").innerText = ing.PurchaseUnit || "ถุง";
+      document.getElementById("stockAddPackCount").value = 1;
+      document.getElementById("stockAdjInput").value = currentStock;
+
+      switchStockAdjMode("add");
+      calcStockAddition();
+
       document.getElementById("modalAdjustStock").classList.remove("hidden");
     }
 
     async function confirmAdjustStock() {
       const id = document.getElementById("stockAdjId").value;
-      const newStock = parseFloat(document.getElementById("stockAdjInput").value) || 0;
+      let newStock = 0;
+      if (currentStockAdjMode === "add") {
+        const packs = parseFloat(document.getElementById("stockAddPackCount").value) || 0;
+        const packQty = parseFloat(document.getElementById("stockAdjPackQty").value) || 1000;
+        const current = parseFloat(document.getElementById("stockAdjCurrentBase").value) || 0;
+        newStock = current + (packs * packQty);
+      } else {
+        newStock = parseFloat(document.getElementById("stockAdjInput").value) || 0;
+      }
+
       closeModal("modalAdjustStock");
 
       try {
@@ -1066,6 +1225,46 @@
         showToast("อัปเดตสต็อกเรียบร้อย", "success");
       } catch (err) {
         alert("เกิดข้อผิดพลาด: " + err.message);
+      }
+    }
+
+    async function deleteIngredientConfirm(id, name) {
+      if (!confirm(`คุณต้องการลบวัตถุดิบ "${name}" ออกจากระบบถาวรหรือไม่?\n(แถวข้อมูลใน Google Sheets จะถูกลบออกทันที)`)) {
+        return;
+      }
+      try {
+        if (!API_URL) throw new Error("กรุณาเชื่อมต่อ Web App URL ก่อน");
+        showToast("กำลังลบข้อมูล...", "info");
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "deleteIngredient", data: { id } })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        await refreshData();
+        showToast("ลบวัตถุดิบเรียบร้อยแล้ว", "success");
+      } catch (err) {
+        alert("ลบไม่สำเร็จ: " + err.message);
+      }
+    }
+
+    async function deleteRecipeConfirm(id, name) {
+      if (!confirm(`คุณต้องการลบสูตรเมนู "${name}" ออกจากระบบหรือไม่?\n(ข้อมูลใน Google Sheets จะถูกลบออกทันที)`)) {
+        return;
+      }
+      try {
+        if (!API_URL) throw new Error("กรุณาเชื่อมต่อ Web App URL ก่อน");
+        showToast("กำลังลบสูตรเมนู...", "info");
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "deleteRecipe", data: { id } })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        await refreshData();
+        showToast("ลบสูตรเมนูเรียบร้อยแล้ว", "success");
+      } catch (err) {
+        alert("ลบไม่สำเร็จ: " + err.message);
       }
     }
 
@@ -1187,6 +1386,9 @@
               <div class="mt-4 pt-3 border-t border-slate-100 flex gap-2">
                 <button onclick="editRecipe('${recipe.ID}')" class="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">
                   ✏️ แก้ไขสูตร
+                </button>
+                <button onclick="deleteRecipeConfirm('${recipe.ID}', '${(recipe.Name || '').replace(/'/g, "\\'")}')" class="px-3 py-2 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-xs font-bold transition">
+                  ลบ
                 </button>
               </div>
             </div>

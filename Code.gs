@@ -121,7 +121,17 @@ function doPost(e) {
       return handleUpdateStock(ss, payload.data);
     }
 
-    // 2.5 ล้างข้อมูลทั้งหมดในดาต้าเบส
+    // 2.5 ลบวัตถุดิบออกจากชีทถาวร
+    if (action === "deleteIngredient") {
+      return handleDeleteIngredient(ss, payload.data);
+    }
+
+    // 2.6 ลบสูตรเมนูออกจากชีทถาวร
+    if (action === "deleteRecipe") {
+      return handleDeleteRecipe(ss, payload.data);
+    }
+
+    // 2.7 ล้างข้อมูลทั้งหมดในดาต้าเบส
     if (action === "clearData") {
       return clearAllSheetData(ss);
     }
@@ -374,6 +384,57 @@ function handleUpdateStock(ss, data) {
   }
 
   return createJsonResponse({ success: false, error: "ไม่พบรหัสวัตถุดิบ: " + data.id });
+}
+
+/**
+ * --------------------------------------------------------------------------
+ * 6.1 ฟังก์ชันลบวัตถุดิบถาวร (Delete Ingredient)
+ * --------------------------------------------------------------------------
+ */
+function handleDeleteIngredient(ss, data) {
+  const sheet = ss.getSheetByName("Ingredients");
+  if (!sheet) throw new Error("ไม่พบชีท Ingredients");
+  const rows = sheet.getDataRange().getValues();
+  const idIdx = rows[0].indexOf("ID");
+
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][idIdx]).trim() === String(data.id).trim()) {
+      sheet.deleteRow(i + 1); // ลบแถวนั้นทิ้งจริงทันที ไม่เหลือแถวว่าง
+      return createJsonResponse({ success: true, message: "ลบวัตถุดิบเรียบร้อยแล้ว" });
+    }
+  }
+  return createJsonResponse({ success: false, error: "ไม่พบรหัสวัตถุดิบที่ต้องการลบ" });
+}
+
+/**
+ * --------------------------------------------------------------------------
+ * 6.2 ฟังก์ชันลบสูตรเมนูถาวร (Delete Recipe)
+ * --------------------------------------------------------------------------
+ */
+function handleDeleteRecipe(ss, data) {
+  const rSheet = ss.getSheetByName("Recipes");
+  const iSheet = ss.getSheetByName("Recipe_Items");
+  if (!rSheet || !iSheet) throw new Error("ชีทไม่ครบถ้วน");
+
+  // 1. ลบจาก Recipes
+  const rRows = rSheet.getDataRange().getValues();
+  const rIdIdx = rRows[0].indexOf("ID");
+  for (let i = 1; i < rRows.length; i++) {
+    if (String(rRows[i][rIdIdx]).trim() === String(data.id).trim()) {
+      rSheet.deleteRow(i + 1);
+      break;
+    }
+  }
+
+  // 2. ลบส่วนผสมใน Recipe_Items
+  const iRows = iSheet.getDataRange().getValues();
+  for (let i = iRows.length - 1; i >= 1; i--) {
+    if (String(iRows[i][0]).trim() === String(data.id).trim()) {
+      iSheet.deleteRow(i + 1);
+    }
+  }
+
+  return createJsonResponse({ success: true, message: "ลบสูตรเมนูเรียบร้อยแล้ว" });
 }
 
 /**
