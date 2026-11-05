@@ -363,28 +363,61 @@
         </div>
 
         <div class="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-100">
-          <p class="font-semibold text-slate-800 text-[11px]">📦 ข้อมูลตอนซื้อ (จัดซื้อ)</p>
+          <div class="flex justify-between items-center">
+            <p class="font-semibold text-slate-800 text-[11px]">📦 ข้อมูลตอนซื้อ (จัดซื้อ)</p>
+            <span class="text-[10px] text-blue-600 font-medium">✨ แปลงหน่วยอัตโนมัติ</span>
+          </div>
+
+          <!-- ตัวช่วยแปลงหน่วยจากฉลากสินค้า (เช่น ลิตร, กก. -> มล., กรัม) -->
+          <div class="p-2.5 bg-blue-50/70 border border-blue-200/60 rounded-xl space-y-2">
+            <label class="block text-[11px] font-bold text-blue-900">ระบุขนาดตามฉลากสินค้า (คนซื้อไม่ต้องคิดเลข):</label>
+            <div class="grid grid-cols-5 gap-2 items-center">
+              <div class="col-span-2">
+                <input type="number" step="any" id="ingLabelQty" placeholder="เช่น 1 หรือ 500" value="1" oninput="convertLabelUnitToRecipeUnit()" class="w-full p-2 rounded-lg border border-blue-200 bg-white font-bold text-slate-900 text-xs">
+              </div>
+              <div class="col-span-3">
+                <select id="ingLabelUnitSelect" onchange="convertLabelUnitToRecipeUnit()" class="w-full p-2 rounded-lg border border-blue-200 bg-white text-xs font-semibold text-slate-800">
+                  <option value="custom">-- เลือกหน่วยตามฉลาก --</option>
+                  <option value="liter">🥛 ลิตร (L) ➡️ 1,000 มล.</option>
+                  <option value="kg">🌾 กิโลกรัม (กก.) ➡️ 1,000 กรัม</option>
+                  <option value="ml">มิลลิลิตร (ml)</option>
+                  <option value="g">กรัม (g)</option>
+                  <option value="piece">ชิ้น / ฟอง / กล่อง</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- ปุ่มลัดยอดนิยม แตะทีเดียวแปลงให้เลย -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span class="text-[10px] text-blue-700 font-medium">ปุ่มลัด:</span>
+              <button type="button" onclick="setLabelPreset(1, 'liter')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">🥛 1 ลิตร (1,000 ml)</button>
+              <button type="button" onclick="setLabelPreset(1, 'kg')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">🌾 1 กก. (1,000 g)</button>
+              <button type="button" onclick="setLabelPreset(500, 'ml')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">500 ml</button>
+              <button type="button" onclick="setLabelPreset(250, 'ml')" class="px-2 py-0.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-md text-[10px] font-semibold text-blue-800 shadow-xs">250 ml</button>
+            </div>
+          </div>
+
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-slate-600 mb-1">ราคาซื้อรวม (บาท)</label>
-              <input type="number" step="any" id="ingPurchasePrice" oninput="calcUnitCostPreview()" required placeholder="150" class="w-full p-2 rounded-lg border border-slate-200 bg-white">
+              <label class="block text-slate-600 mb-1">ราคาซื้อต่อแพ็ก (บาท)</label>
+              <input type="number" step="any" id="ingPurchasePrice" oninput="calcUnitCostPreview()" required placeholder="เช่น 56" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold">
             </div>
             <div>
               <label class="block text-slate-600 mb-1">ชื่อหน่วยซื้อ</label>
-              <input type="text" id="ingPurchaseUnit" placeholder="ถุง, ลิตร, แพ็ก" value="ถุง" class="w-full p-2 rounded-lg border border-slate-200 bg-white">
+              <input type="text" id="ingPurchaseUnit" placeholder="ถุง, กล่อง, แกลลอน" value="กล่อง" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs">
             </div>
           </div>
           
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-slate-600 mb-1">ปริมาณที่ได้ต่อแพ็ก (แปลงเป็นหน่วยย่อย)</label>
-              <input type="number" step="any" id="ingPurchaseQty" oninput="calcUnitCostPreview()" required placeholder="1000" class="w-full p-2 rounded-lg border border-slate-200 bg-white">
+              <label class="block text-slate-600 mb-1">ปริมาณสุทธิต่อแพ็ก (หน่วยย่อย)</label>
+              <input type="number" step="any" id="ingPurchaseQty" oninput="calcUnitCostPreview(); applyBagsToStock();" required placeholder="1000" class="w-full p-2 rounded-lg border border-slate-200 bg-white font-bold text-slate-900 text-xs">
             </div>
             <div>
               <label class="block text-slate-600 mb-1">หน่วยใช้ชง (หน่วยย่อย)</label>
-              <select id="ingRecipeUnit" onchange="calcUnitCostPreview()" class="w-full p-2 rounded-lg border border-slate-200 bg-white">
-                <option value="กรัม">กรัม (g)</option>
+              <select id="ingRecipeUnit" onchange="calcUnitCostPreview()" class="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold">
                 <option value="มล.">มิลลิลิตร (ml)</option>
+                <option value="กรัม">กรัม (g)</option>
                 <option value="ชิ้น">ชิ้น</option>
               </select>
             </div>
@@ -395,7 +428,7 @@
           <div class="flex justify-between items-center">
             <label class="font-semibold text-slate-700 text-[11px]">สต็อกคงเหลือปัจจุบัน (หน่วยย่อย)</label>
             <div class="flex items-center gap-1.5 text-[11px]">
-              <span class="text-slate-500">มีกี่แพ็ก/ถุง?</span>
+              <span class="text-slate-500">จำนวน</span>
               <input type="number" id="ingBagsHelper" value="1" min="1" class="w-12 p-1 text-center border border-slate-200 rounded bg-white font-bold" oninput="applyBagsToStock()">
               <button type="button" onclick="applyBagsToStock()" class="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 font-bold text-[10px]">
                 คำนวณ
@@ -1080,6 +1113,49 @@
       updateEmojiPreview("ing");
       calcUnitCostPreview();
       modal.classList.remove("hidden");
+    }
+
+    function setLabelPreset(qty, unit) {
+      document.getElementById("ingLabelQty").value = qty;
+      document.getElementById("ingLabelUnitSelect").value = unit;
+      convertLabelUnitToRecipeUnit();
+    }
+
+    function convertLabelUnitToRecipeUnit() {
+      const qty = parseFloat(document.getElementById("ingLabelQty").value) || 0;
+      const unit = document.getElementById("ingLabelUnitSelect").value;
+      const purchaseQtyInput = document.getElementById("ingPurchaseQty");
+      const recipeUnitSelect = document.getElementById("ingRecipeUnit");
+      const purchaseUnitInput = document.getElementById("ingPurchaseUnit");
+
+      if (unit === "liter") {
+        purchaseQtyInput.value = qty > 0 ? (qty * 1000) : 1000;
+        recipeUnitSelect.value = "มล.";
+        if (!purchaseUnitInput.value || purchaseUnitInput.value === "ถุง" || purchaseUnitInput.value === "กล่อง") {
+          purchaseUnitInput.value = qty === 1 ? "กล่อง (1 ลิตร)" : `แกลลอน (${qty} ลิตร)`;
+        }
+        showToast(`แปลงสำเร็จ: ${qty} ลิตร = ${(qty * 1000).toLocaleString()} มิลลิลิตร (ml)`, "info");
+      } else if (unit === "kg") {
+        purchaseQtyInput.value = qty > 0 ? (qty * 1000) : 1000;
+        recipeUnitSelect.value = "กรัม";
+        if (!purchaseUnitInput.value || purchaseUnitInput.value === "ถุง" || purchaseUnitInput.value === "กล่อง") {
+          purchaseUnitInput.value = qty === 1 ? "ถุง (1 กก.)" : `ถุง (${qty} กก.)`;
+        }
+        showToast(`แปลงสำเร็จ: ${qty} กิโลกรัม = ${(qty * 1000).toLocaleString()} กรัม (g)`, "info");
+      } else if (unit === "ml") {
+        purchaseQtyInput.value = qty > 0 ? qty : 500;
+        recipeUnitSelect.value = "มล.";
+      } else if (unit === "g") {
+        purchaseQtyInput.value = qty > 0 ? qty : 180;
+        recipeUnitSelect.value = "กรัม";
+      } else if (unit === "piece") {
+        purchaseQtyInput.value = qty > 0 ? qty : 1;
+        recipeUnitSelect.value = "ชิ้น";
+        purchaseUnitInput.value = "แพ็ก";
+      }
+
+      calcUnitCostPreview();
+      applyBagsToStock();
     }
 
     function applyBagsToStock() {
