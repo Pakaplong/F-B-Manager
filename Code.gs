@@ -220,7 +220,10 @@ function handleRecordSale(ss, saleData) {
         const usedQty = (parseFloat(item.qty) || 0) * qtySold;
 
         if (stockMap[ingId]) {
-          stockMap[ingId].stock -= usedQty;
+          // หากเป็นทรัพยากรไม่จำกัด (ค่าสต็อกเป็น -1) จะไม่มีวันถูกหักสต็อก
+          if (stockMap[ingId].stock !== -1) {
+            stockMap[ingId].stock -= usedQty;
+          }
         }
       }
     }

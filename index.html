@@ -334,6 +334,27 @@
       <form id="ingredientForm" onsubmit="saveIngredientSubmit(event)" class="space-y-4 pt-4 text-xs">
         <input type="hidden" id="ingId">
         <input type="hidden" id="ingImageBase64">
+        <input type="hidden" id="ingIsUnlimited" value="false">
+
+        <!-- ปุ่มสลับประเภทวัตถุดิบ: ทั่วไป vs ทรัพยากรหลัก (น้ำกรอง/ก๊อก) -->
+        <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+          <button type="button" id="btnTypeStandard" onclick="setIngredientType('standard')" class="py-1.5 rounded-lg bg-white shadow-sm text-slate-900">
+            📦 วัตถุดิบทั่วไป (นับสต็อก)
+          </button>
+          <button type="button" id="btnTypeUnlimited" onclick="setIngredientType('unlimited')" class="py-1.5 rounded-lg text-slate-500 hover:text-slate-900">
+            🚰 น้ำกรอง / ทรัพยากรหลัก (♾️ ไม่จำกัด)
+          </button>
+        </div>
+
+        <!-- กล่องแนะนำเมื่อเลือกเป็นน้ำกรอง/ทรัพยากรหลัก -->
+        <div id="unlimitedBanner" class="p-2.5 bg-sky-50 border border-sky-200 rounded-xl text-sky-900 text-[11px] leading-relaxed hidden">
+          <p class="font-bold flex items-center gap-1 text-sky-800">
+            <span>💧</span> โหมดทรัพยากรหลัก (ก๊อกกรอง / น้ำประปา):
+          </p>
+          <p class="mt-0.5 text-sky-700">
+            สต็อกจะตั้งเป็น <strong>♾️ ไม่จำกัด</strong> อัตโนมัติ ไม่มีวันขึ้นว่าหมดสต็อก และไม่บล็อกหน้าขายหน้าร้าน สามารถนำไปใส่ในสูตรเมนูชงได้ตามปกติครับ
+          </p>
+        </div>
 
         <!-- รูปถ่าย/คลังภาพ + Emoji -->
         <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
@@ -815,7 +836,11 @@
         // เช็กว่าวัตถุดิบในสูตรนี้มีตัวไหนหมดสต็อกหรือไม่
         const isOutOfStock = recipeItems.some(ri => {
           const ing = db.ingredients.find(i => i.ID === ri.IngredientID);
-          return ing && (Number(ing.CurrentStock) <= 0 || Number(ing.CurrentStock) < Number(ri.QuantityUsed));
+          if (!ing) return false;
+          // ทรัพยากรไม่จำกัด (ก๊อกกรอง/น้ำประปา) จะไม่มีวันหมดสต็อก
+          const isUnlimited = Number(ing.CurrentStock) === -1 || String(ing.PurchaseUnit).includes("ไม่จำกัด") || String(ing.PurchaseUnit).includes("ก๊อก");
+          if (isUnlimited) return false;
+          return Number(ing.CurrentStock) <= 0 || Number(ing.CurrentStock) < Number(ri.QuantityUsed);
         });
 
         const thumbHtml = renderVisualThumb(recipe.Image || recipe.image, recipe.Emoji || recipe.emoji, `w-14 h-14 ${isOutOfStock ? 'grayscale opacity-50' : ''}`);
@@ -998,17 +1023,22 @@
       }
 
       container.innerHTML = db.ingredients.map(ing => {
+        const isUnlimited = Number(ing.CurrentStock) === -1 || String(ing.PurchaseUnit).includes("ไม่จำกัด") || String(ing.PurchaseUnit).includes("ก๊อก");
         const stock = Number(ing.CurrentStock) || 0;
         const packQty = Number(ing.PurchaseQty) || 1000;
-        const isOutOfStock = stock <= 0;
-        const isLow = !isOutOfStock && stock <= Math.max(50, packQty * 0.25);
+        const isOutOfStock = !isUnlimited && stock <= 0;
+        const isLow = !isUnlimited && !isOutOfStock && stock <= Math.max(50, packQty * 0.25);
         const thumb = renderVisualThumb(ing.Image || ing.image, ing.Emoji || ing.emoji, `w-12 h-12 ${isOutOfStock ? 'grayscale opacity-60' : ''}`);
 
         let cardStyle = "bg-white border-slate-200";
         let badgeStyle = "bg-slate-50 border-slate-100 text-slate-900";
         let badgeNotice = "";
 
-        if (isOutOfStock) {
+        if (isUnlimited) {
+          cardStyle = "bg-white border-sky-200 shadow-sm";
+          badgeStyle = "bg-sky-50 border-sky-200 text-sky-900";
+          badgeNotice = '<p class="text-[10px] text-sky-600 mt-1 font-semibold flex items-center gap-1"><span>🚰</span> ทรัพยากรหลัก: พร้อมใช้ตลอดเวลา ไม่มีวันหมด</p>';
+        } else if (isOutOfStock) {
           cardStyle = "bg-slate-50/80 border-rose-200 opacity-90";
           badgeStyle = "bg-rose-50 border-rose-200 text-rose-700";
           badgeNotice = '<p class="text-[10px] text-rose-600 mt-1 font-bold flex items-center gap-1"><span>🚨</span> ของหมดสต็อก (ต้องซื้อเพิ่ม)</p>';
@@ -1028,7 +1058,7 @@
                   <div>
                     <div class="flex items-center gap-1.5">
                       <h4 class="font-bold text-slate-900 text-sm">${ing.Name}</h4>
-                      ${isOutOfStock ? '<span class="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded font-bold">หมด</span>' : ''}
+                      ${isUnlimited ? '<span class="text-[9px] bg-sky-100 text-sky-700 px-1.5 py-0.2 rounded font-bold">🚰 ก๊อกกรอง</span>' : (isOutOfStock ? '<span class="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded font-bold">หมด</span>' : '')}
                     </div>
                     <span class="text-[10px] text-slate-400 font-mono">${ing.ID}</span>
                   </div>
@@ -1037,9 +1067,10 @@
                   <button onclick="openIngredientModal('${ing.ID}')" title="แก้ไข" class="text-xs text-slate-500 hover:text-slate-800 p-1.5 rounded-lg hover:bg-slate-100">
                     ✏️
                   </button>
+                  ${!isUnlimited ? `
                   <button onclick="openAdjustStockModal('${ing.ID}')" class="text-xs ${isOutOfStock ? 'bg-rose-600 hover:bg-rose-700' : 'bg-slate-900 hover:bg-slate-800'} text-white px-2.5 py-1 rounded-lg font-medium shadow-sm">
                     + เติมของ
-                  </button>
+                  </button>` : ''}
                   <button onclick="deleteIngredientConfirm('${ing.ID}', '${safeName}')" title="ลบวัตถุดิบถาวร" class="text-xs text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 font-bold ml-0.5">
                     ✕
                   </button>
@@ -1048,9 +1079,9 @@
 
               <div class="mt-4 p-3 rounded-xl border ${badgeStyle}">
                 <div class="flex justify-between items-baseline">
-                  <span class="text-xs ${isOutOfStock ? 'text-rose-600' : (isLow ? 'text-amber-700' : 'text-slate-500')} font-medium">สต็อกคงเหลือ</span>
-                  <span class="text-lg font-black ${isOutOfStock ? 'text-rose-600' : 'text-slate-900'}">
-                    ${Number(ing.CurrentStock).toLocaleString()} <span class="text-xs font-normal text-slate-500">${ing.RecipeUnit}</span>
+                  <span class="text-xs ${isUnlimited ? 'text-sky-800' : (isOutOfStock ? 'text-rose-600' : (isLow ? 'text-amber-700' : 'text-slate-500'))} font-medium">สต็อกคงเหลือ</span>
+                  <span class="text-lg font-black ${isUnlimited ? 'text-sky-900' : (isOutOfStock ? 'text-rose-600' : 'text-slate-900')}">
+                    ${isUnlimited ? '♾️ ไม่จำกัด' : `${Number(ing.CurrentStock).toLocaleString()} <span class="text-xs font-normal text-slate-500">${ing.RecipeUnit}</span>`}
                   </span>
                 </div>
                 ${badgeNotice}
@@ -1060,7 +1091,7 @@
             <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 text-[11px] text-slate-500">
               <div>
                 <span>ซื้อมา: </span>
-                <span class="font-medium text-slate-700">฿${ing.PurchasePrice} / ${ing.PurchaseUnit}</span>
+                <span class="font-medium text-slate-700">${isUnlimited ? 'ก๊อกประปากรอง' : `฿${ing.PurchasePrice} / ${ing.PurchaseUnit}`}</span>
               </div>
               <div class="text-right">
                 <span>ต้นทุนใช้: </span>
@@ -1070,6 +1101,45 @@
           </div>
         `;
       }).join("");
+    }
+
+    function setIngredientType(type) {
+      const btnStd = document.getElementById("btnTypeStandard");
+      const btnUnl = document.getElementById("btnTypeUnlimited");
+      const banner = document.getElementById("unlimitedBanner");
+      const isUnlimitedHidden = document.getElementById("ingIsUnlimited");
+
+      if (type === "unlimited") {
+        isUnlimitedHidden.value = "true";
+        btnUnl.className = "py-1.5 rounded-lg bg-sky-600 text-white shadow-sm font-bold";
+        btnStd.className = "py-1.5 rounded-lg text-slate-500 hover:text-slate-900";
+        banner.classList.remove("hidden");
+
+        const nameInput = document.getElementById("ingName");
+        if (!nameInput.value || nameInput.value.trim() === "" || nameInput.value === "ผงชาไทยพรีเมียม") {
+          nameInput.value = "น้ำเปล่า (น้ำกรอง)";
+        }
+        document.getElementById("ingEmoji").value = "💧";
+        updateEmojiPreview("ing");
+        document.getElementById("ingPurchasePrice").value = "0";
+        document.getElementById("ingPurchaseUnit").value = "ก๊อกกรอง (ไม่จำกัด)";
+        document.getElementById("ingPurchaseQty").value = "1000";
+        document.getElementById("ingRecipeUnit").value = "มล.";
+        document.getElementById("ingCurrentStock").value = "-1";
+      } else {
+        isUnlimitedHidden.value = "false";
+        btnStd.className = "py-1.5 rounded-lg bg-white shadow-sm text-slate-900 font-bold";
+        btnUnl.className = "py-1.5 rounded-lg text-slate-500 hover:text-slate-900";
+        banner.classList.add("hidden");
+
+        if (document.getElementById("ingCurrentStock").value === "-1") {
+          document.getElementById("ingCurrentStock").value = "1000";
+        }
+        if (document.getElementById("ingPurchaseUnit").value === "ก๊อกกรอง (ไม่จำกัด)") {
+          document.getElementById("ingPurchaseUnit").value = "ถุง";
+        }
+      }
+      calcUnitCostPreview();
     }
 
     function openIngredientModal(id = "") {
@@ -1092,6 +1162,9 @@
           document.getElementById("ingRecipeUnit").value = ing.RecipeUnit;
           document.getElementById("ingCurrentStock").value = ing.CurrentStock;
 
+          const isUnl = Number(ing.CurrentStock) === -1 || String(ing.PurchaseUnit).includes("ไม่จำกัด") || String(ing.PurchaseUnit).includes("ก๊อก");
+          setIngredientType(isUnl ? "unlimited" : "standard");
+
           const imgData = ing.Image || ing.image || "";
           if (imgData && (String(imgData).startsWith("data:image") || String(imgData).startsWith("http"))) {
             document.getElementById("ingImageBase64").value = imgData;
@@ -1108,6 +1181,7 @@
         form.reset();
         document.getElementById("ingId").value = "";
         document.getElementById("ingEmoji").value = "🍂";
+        setIngredientType("standard");
       }
 
       updateEmojiPreview("ing");
@@ -1181,17 +1255,20 @@
       const recipeUnit = document.getElementById("ingRecipeUnit").value;
       const costPerUnit = purchaseQty > 0 ? (purchasePrice / purchaseQty) : 0;
 
+      const isUnlimited = document.getElementById("ingIsUnlimited").value === "true";
+      const currentStockVal = isUnlimited ? -1 : (parseFloat(document.getElementById("ingCurrentStock").value) || 0);
+
       const payload = {
         id: id || ("ING_" + String(Date.now()).slice(-4)),
         name: document.getElementById("ingName").value,
-        emoji: document.getElementById("ingEmoji").value || "🍂",
+        emoji: document.getElementById("ingEmoji").value || (isUnlimited ? "💧" : "🍂"),
         image: document.getElementById("ingImageBase64").value || "",
         purchasePrice: purchasePrice,
         purchaseQty: purchaseQty,
-        purchaseUnit: document.getElementById("ingPurchaseUnit").value,
+        purchaseUnit: isUnlimited ? "ก๊อกกรอง (ไม่จำกัด)" : document.getElementById("ingPurchaseUnit").value,
         recipeUnit: recipeUnit,
         costPerUnit: Math.round(costPerUnit * 10000) / 10000,
-        currentStock: parseFloat(document.getElementById("ingCurrentStock").value) || 0
+        currentStock: currentStockVal
       };
 
       closeModal("modalIngredient");
